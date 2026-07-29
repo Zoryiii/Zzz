@@ -1,0 +1,31 @@
+{
+  "name": "鈡净毓 · 个人工作台",
+  "short_name": "鈡净毓",
+  "description": "个人工作台 - 记账、练字、英语、运动、影集、灵感一站式管理",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F1EB",
+  "theme_color": "#B54A3A",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "public/images/app-icon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "public/images/app-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "public/images/app-icon.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ]
+}
