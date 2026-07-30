@@ -4477,6 +4477,181 @@ body {
   color: var(--daily-primary);
 }
 
+/* 历史记录列表 */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border-left: 3px solid var(--daily-primary);
+}
+
+.history-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--daily-primary);
+  margin-bottom: 10px;
+}
+
+.history-point {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.history-point.good {
+  border-left: 3px solid #2ecc71;
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.history-point.tweak {
+  border-left: 3px solid #f39c12;
+  background: rgba(243, 156, 18, 0.1);
+}
+
+/* 历史总结卡片 */
+.history-summary-card {
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.9), rgba(254, 235, 200, 0.6));
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(181, 74, 58, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s;
+}
+
+.history-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.history-summary-icon {
+  font-size: 36px;
+}
+
+.history-summary-info {
+  flex: 1;
+}
+
+.history-summary-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--accounting-primary);
+}
+
+.history-summary-hint {
+  font-size: 13px;
+  color: var(--color-text-light);
+}
+
+.history-summary-arrow {
+  font-size: 24px;
+  color: var(--accounting-primary);
+}
+
+.year-group {
+  margin-bottom: 24px;
+}
+
+.year-group-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accounting-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.month-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.month-item {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--color-border);
+}
+
+.month-item:hover {
+  background: var(--accounting-bg);
+  border-color: var(--accounting-primary);
+}
+
+.month-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.month-item-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accounting-primary);
+}
+
+.month-item-stats {
+  font-size: 13px;
+}
+
+.month-item-summary {
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.month-summary-detail {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.month-summary-stat {
+  text-align: center;
+  padding: 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+}
+
+.month-summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.month-summary-value.expense {
+  color: var(--accounting-primary);
+}
+
+.month-summary-value.income {
+  color: #27ae60;
+}
+
+.month-summary-value.balance {
+  color: var(--tasks-primary);
+}
+
+.month-summary-label {
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
 /* ========================================
    记账模块 - 本月总结
    ======================================== */

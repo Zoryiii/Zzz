@@ -122,15 +122,88 @@ function compressImage(file, maxWidth) {
   });
 }
 
-function openAppOrWeb(appScheme, webUrl) {
-  const startTime = Date.now();
-  const timer = setTimeout(() => {
-    if (Date.now() - startTime < 2500) {
-      window.location.href = webUrl;
-    }
-  }, 2000);
-  window.location.href = appScheme;
-  window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
+// APP深度链接配置
+const APP_LINKS = {
+  douyin: { scheme: 'snssdk1128://', intent: 'snssdk1128://', web: 'https://www.douyin.com' },
+  bilibili: { scheme: 'bilibili://', intent: 'bilibili://', web: 'https://www.bilibili.com' },
+  netease: { scheme: 'neteasecloudmusic://', intent: 'neteasecloudmusic://', web: 'https://music.163.com' },
+  eudic: { scheme: 'eudic://', intent: 'eudic://', web: 'https://www.eudic.net' },
+  doubao: { scheme: 'doubao://', intent: 'doubao://', web: 'https://www.doubao.com' }
+};
+
+function openAppOrWeb(appKey, webUrl) {
+  const app = APP_LINKS[appKey] || { scheme: appKey, intent: appKey, web: webUrl };
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  
+  if (isAndroid) {
+    // Android: 使用更可靠的方式
+    const intentUrl = `intent://#Intent;scheme=${app.scheme.replace('://','')};package=com.netease.cloudmusic;end`;
+    const startTime = Date.now();
+    
+    // 创建隐藏iframe尝试打开
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = app.intent;
+    document.body.appendChild(iframe);
+    
+    // 备用方案：直接跳转
+    setTimeout(() => {
+      if (!document.hidden && Date.now() - startTime < 2000) {
+        window.location.href = webUrl || app.web;
+      }
+      document.body.removeChild(iframe);
+    }, 1500);
+    
+    // 如果页面隐藏说明APP打开成功
+    window.addEventListener('pagehide', () => {
+      document.body.removeChild(iframe);
+    }, { once: true });
+    
+  } else if (isIOS) {
+    // iOS: 使用location.href + timeout
+    const startTime = Date.now();
+    
+    // 创建临时链接
+    const link = document.createElement('a');
+    link.href = app.scheme;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      if (!document.hidden && Date.now() - startTime < 2000) {
+        window.location.href = webUrl || app.web;
+      }
+      document.body.removeChild(link);
+    }, 1500);
+    
+  } else {
+    // 桌面端: 直接打开网页
+    window.open(webUrl || app.web, '_blank');
+  }
+}
+
+// 便捷函数
+function openDouyinApp(searchQuery) {
+  const url = searchQuery ? `https://www.douyin.com/search/${encodeURIComponent(searchQuery)}` : 'https://www.douyin.com';
+  openAppOrWeb('douyin', url);
+}
+
+function openBilibiliApp(searchQuery) {
+  const url = searchQuery ? `https://search.bilibili.com/all?keyword=${encodeURIComponent(searchQuery)}` : 'https://www.bilibili.com';
+  openAppOrWeb('bilibili', url);
+}
+
+function openNeteaseApp(searchQuery) {
+  const url = searchQuery ? `https://music.163.com/#/search/m/?s=${encodeURIComponent(searchQuery)}` : 'https://music.163.com';
+  openAppOrWeb('netease', url);
+}
+
+function openEudicApp(searchQuery) {
+  const url = searchQuery ? `https://www.eudic.net/v4/en/worddetail/${encodeURIComponent(searchQuery)}` : 'https://www.eudic.net';
+  openAppOrWeb('eudic', url);
 }
 
 function showToast(message, type = 'info') {
@@ -872,21 +945,21 @@ function renderCalligraphy(main, params) {
     
     <h2 style="font-size: 18px; font-weight: 600; margin: 24px 0 16px;">📚 学习资源</h2>
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-      <div onclick="openAppOrWeb('snssdk1128://webview?url=https%3A%2F%2Fwww.douyin.com%2Fsearch%2F%E7%BB%83%E5%AD%97', 'https://www.douyin.com/search/练字')" style="padding: 20px; background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+      <div onclick="openDouyinApp('练字')" style="padding: 20px; background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <div style="font-size: 36px;">🎵</div>
         <div>
           <div style="font-weight: 600; margin-bottom: 4px;">抖音搜索</div>
           <div style="font-size: 12px; color: #666;">搜索练字视频教程</div>
         </div>
       </div>
-      <div onclick="openAppOrWeb('bilibili://', 'https://search.bilibili.com/all?keyword=练字教程')" style="padding: 20px; background: linear-gradient(135deg, #e6f4ff 0%, #cceaff 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+      <div onclick="openBilibiliApp('练字教程')" style="padding: 20px; background: linear-gradient(135deg, #e6f4ff 0%, #cceaff 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <div style="font-size: 36px;">📺</div>
         <div>
           <div style="font-weight: 600; margin-bottom: 4px;">B站教程</div>
           <div style="font-size: 12px; color: #666;">丰富练字教学视频</div>
         </div>
       </div>
-      <div onclick="openAppOrWeb('netease://', 'https://music.163.com')" style="padding: 20px; background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+      <div onclick="openNeteaseApp()" style="padding: 20px; background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <div style="font-size: 36px;">🎶</div>
         <div>
           <div style="font-weight: 600; margin-bottom: 4px;">网易云音乐</div>
@@ -1252,7 +1325,7 @@ function renderEnglish(main) {
           <div class="resource-name">Grammarly</div>
           <div class="resource-desc">写作语法检查</div>
         </a>
-        <a class="resource-card" onclick="openAppOrWeb('eudic://', 'https://www.eudic.net')" href="javascript:void(0)">
+        <a class="resource-card" onclick="openEudicApp()" href="javascript:void(0)">
           <div class="resource-icon">📖</div>
           <div class="resource-name">欧路词典</div>
           <div class="resource-desc">英汉双解词典</div>
@@ -1347,66 +1420,82 @@ window.startShadowing = function() {
   const scoreCircle = document.getElementById('scoreCircle');
   const scoreTips = document.getElementById('scoreTips');
   
-  const doScoring = (spoken) => {
-    const target = sentence.replace(/[^a-zA-Z\s']/g, '').toLowerCase().trim();
-    const sp = spoken.toLowerCase().trim();
-    const tw = target.split(/\s+/); const sw = sp.split(/\s+/);
-    let matches = 0;
-    tw.forEach(w => { if (w.length >= 2 && sw.some(s => s.includes(w.substring(0,2)))) matches++; });
-    const score = tw.length > 0 ? Math.round((matches / tw.length) * 100) : 0;
-    scoreCircle.textContent = score;
-    let level = score >= 90 ? '🌟 极佳！' : score >= 75 ? '😊 很好！' : score >= 60 ? '👍 不错！' : score >= 40 ? '💪 继续加油！' : '📖 别灰心！';
-    let tip = score >= 90 ? '发音非常清晰，继续保持！' : score >= 75 ? '发音良好，注意语调节奏。' : score >= 60 ? '基本传达意思，多练习连读。' : '建议慢速练习每个单词。';
-    scoreTips.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${level}</div><div style="font-size:13px;">${tip}</div>`;
-    resultDiv.style.display = 'block';
-    const today = getToday();
-    let log = State.englishLogs.find(l => l.date === today);
-    if (!log) { log = { date: today, attempts: 0, bestScore: 0 }; State.englishLogs.push(log); }
-    log.attempts++; log.bestScore = Math.max(log.bestScore, score);
-    saveState('englishLogs');
-  };
-  
-  const simulateScoring = () => {
-    showToast('语音识别不可用，启动模拟评分...', 'info');
-    resultDiv.style.display = 'block';
-    scoreCircle.textContent = '...';
-    scoreTips.innerHTML = '<div style="font-size:13px;">正在模拟评分，请大声朗读句子...</div>';
-    
-    setTimeout(() => {
-      const target = sentence.replace(/[^a-zA-Z\s']/g, '').toLowerCase().trim();
-      const tw = target.split(/\s+/);
-      const wordCount = tw.length;
-      
-      const simScores = [
-        () => { scoreCircle.textContent = '32'; scoreTips.innerHTML = '<div style="font-weight:600;">📖 模拟评分：较差</div><div style="font-size:13px;">模拟朗读识别结果，多读几遍试试！</div>'; },
-        () => { scoreCircle.textContent = '58'; scoreTips.innerHTML = '<div style="font-weight:600;">💪 模拟评分：及格</div><div style="font-size:13px;">能识别大部分单词，继续练习！</div>'; },
-        () => { scoreCircle.textContent = '76'; scoreTips.innerHTML = '<div style="font-weight:600;">😊 模拟评分：良好</div><div style="font-size:13px;">发音不错，注意连读和语调。</div>'; },
-        () => { scoreCircle.textContent = '91'; scoreTips.innerHTML = '<div style="font-weight:600;">🌟 模拟评分：优秀</div><div style="font-size:13px;">非常棒！继续保持！</div>'; }
-      ];
-      const randomIdx = Math.floor(Math.random() * simScores.length);
-      simScores[randomIdx]();
-      
-      const today = getToday();
-      let log = State.englishLogs.find(l => l.date === today);
-      if (!log) { log = { date: today, attempts: 0, bestScore: 0 }; State.englishLogs.push(log); }
-      log.attempts++;
-      const currentScore = parseInt(scoreCircle.textContent) || 0;
-      log.bestScore = Math.max(log.bestScore, currentScore);
-      saveState('englishLogs');
-    }, 2000);
-  };
-  
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-    simulateScoring();
+  // 显示输入框让用户手动输入朗读的内容
+  resultDiv.style.display = 'block';
+  scoreCircle.textContent = '?';
+  scoreTips.innerHTML = `
+    <div style="font-weight:600; margin-bottom:8px;">🎤 跟读评分</div>
+    <div style="font-size:13px; margin-bottom:12px;">请朗读句子，然后把你读到的内容输入到下方框中</div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="spokenInput" style="flex:1; padding:10px; border:1px solid var(--color-border); border-radius:var(--radius-md);" placeholder="输入你读到的英文...">
+      <button class="btn btn-primary" onclick="scoreSpokenText()">评分</button>
+    </div>
+  `;
+};
+
+window.scoreSpokenText = function() {
+  const sentence = document.querySelector('.sentence-en')?.textContent || '';
+  const spoken = document.getElementById('spokenInput').value.trim();
+  if (!spoken) {
+    showToast('请先输入你读到的内容', 'error');
     return;
   }
   
-  const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  rec.lang = 'en-US'; rec.interimResults = false;
-  showToast('请开始说话...', 'info');
-  rec.onresult = e => doScoring(e.results[0][0].transcript);
-  rec.onerror = () => { showToast('识别失败，已切换模拟评分', 'error'); simulateScoring(); };
-  rec.start();
+  const target = sentence.replace(/[^a-zA-Z\s']/g, '').toLowerCase().trim();
+  const sp = spoken.replace(/[^a-zA-Z\s']/g, '').toLowerCase().trim();
+  const tw = target.split(/\s+/).filter(w => w.length > 0);
+  const sw = sp.split(/\s+/).filter(w => w.length > 0);
+  
+  // 计算单词匹配率
+  let matches = 0;
+  const matchedWords = [];
+  tw.forEach(w => {
+    if (sw.some(s => s === w || (w.length >= 3 && s.includes(w)))) {
+      matches++;
+      matchedWords.push(w);
+    }
+  });
+  
+  // 计算完全匹配的单词数
+  let exactMatches = 0;
+  tw.forEach((w, i) => {
+    if (sw[i] === w) exactMatches++;
+  });
+  
+  const wordScore = tw.length > 0 ? (matches / tw.length) * 70 : 0;
+  const exactScore = tw.length > 0 ? (exactMatches / tw.length) * 30 : 0;
+  const score = Math.round(wordScore + exactScore);
+  
+  const scoreCircle = document.getElementById('scoreCircle');
+  const scoreTips = document.getElementById('scoreTips');
+  
+  scoreCircle.textContent = score;
+  let level, tip;
+  if (score >= 90) { level = '🌟 极佳！'; tip = '发音非常清晰，继续保持！'; }
+  else if (score >= 75) { level = '😊 很好！'; tip = '发音良好，注意语调节奏。'; }
+  else if (score >= 60) { level = '👍 不错！'; tip = '基本传达意思，多练习连读。'; }
+  else if (score >= 40) { level = '💪 继续加油！'; tip = '建议慢速练习每个单词。'; }
+  else { level = '📖 别灰心！'; tip = '从单词发音开始，慢慢来。'; }
+  
+  scoreTips.innerHTML = `
+    <div style="font-weight:600; margin-bottom:8px;">${level}</div>
+    <div style="font-size:13px; margin-bottom:8px;">${tip}</div>
+    <div style="font-size:12px; color: var(--color-text-light);">
+      目标句: ${sentence}<br>
+      你的朗读: ${spoken}<br>
+      匹配词: ${matches}/${tw.length} 个单词
+    </div>
+    <button class="btn btn-secondary" style="margin-top:12px;" onclick="startShadowing()">重新评分</button>
+  `;
+  
+  // 保存记录
+  const today = getToday();
+  let log = State.englishLogs.find(l => l.date === today);
+  if (!log) { log = { date: today, attempts: 0, bestScore: 0 }; State.englishLogs.push(log); }
+  log.attempts++;
+  log.bestScore = Math.max(log.bestScore, score);
+  saveState('englishLogs');
+  showToast(`评分: ${score}分`, 'success');
 };
 
 window.sendChat = function() {
@@ -2230,7 +2319,7 @@ function renderSports(main) {
 }
 
 window.openSportVideo = function(videoUrl, title) {
-  openAppOrWeb('bilibili://', videoUrl);
+  openBilibiliApp(title || '运动');
 };
 
 window.startSport = function(categoryId) {
@@ -2245,7 +2334,7 @@ window.startSport = function(categoryId) {
     <div class="sport-timer" style="padding: 24px; background: var(--sports-bg); border-radius: var(--radius-lg);">
       <div class="timer-display" id="sportTimer" style="font-family: var(--font-title); font-size: 56px; color: var(--sports-primary); letter-spacing: 4px;">00:00</div>
     </div>
-    ${cat.videoUrl ? `<a href="javascript:void(0)" onclick="openAppOrWeb('bilibili://', '${cat.videoUrl}')" style="display:block; text-align:center; margin-bottom: 16px; color: var(--sports-primary); font-size: 14px;">📺 跳转教学视频</a>` : ''}
+    ${cat.videoUrl ? `<a href="javascript:void(0)" onclick="openBilibiliApp('${cat.name}')" style="display:block; text-align:center; margin-bottom: 16px; color: var(--sports-primary); font-size: 14px;">📺 跳转教学视频</a>` : ''}
     <div style="display:flex; gap: 12px;">
       <button class="btn btn-secondary" style="flex:1;" id="toggleTimer">▶ 开始</button>
       <button class="btn btn-primary" style="flex:1;" id="finishTimer">完成</button>
@@ -2327,94 +2416,153 @@ function renderDaily(main) {
   const progress = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
   const circumference = 2 * Math.PI * 35;
   
+  // 统计历史数据
+  const allReflections = State.dailyReflections.filter(r => r.learnPoint || r.reviewGood || r.reviewTweak);
+  const totalReflections = allReflections.length;
+  const totalLearnPoints = State.dailyReflections.filter(r => r.learnPoint).length;
+  const totalReviews = State.dailyReflections.filter(r => r.reviewGood || r.reviewTweak).length;
+  
   main.innerHTML = `
     ${createPageHeader('日常记录', '每周习惯养成，点滴积累成长', 'daily')}
     
-    <div class="week-summary">
-      <div class="week-progress">
-        <svg class="progress-ring" viewBox="0 0 80 80">
-          <circle class="bg" cx="40" cy="40" r="35"></circle>
-          <circle class="fg" cx="40" cy="40" r="35" 
-            stroke-dasharray="${circumference}" 
-            stroke-dashoffset="${circumference - (progress / 100) * circumference}"></circle>
-        </svg>
-        <div class="progress-text">
-          <h4>${completedDays}/${totalDays}</h4>
-          <p>完成度 ${progress}%</p>
+    <div class="module-tabs daily-tabs">
+      <button class="module-tab active" data-tab="record">📝 记录</button>
+      <button class="module-tab" data-tab="history">📊 历史</button>
+    </div>
+    
+    <div class="module-tab-content active" id="tab-record">
+      <div class="week-summary">
+        <div class="week-progress">
+          <svg class="progress-ring" viewBox="0 0 80 80">
+            <circle class="bg" cx="40" cy="40" r="35"></circle>
+            <circle class="fg" cx="40" cy="40" r="35" 
+              stroke-dasharray="${circumference}" 
+              stroke-dashoffset="${circumference - (progress / 100) * circumference}"></circle>
+          </svg>
+          <div class="progress-text">
+            <h4>${completedDays}/${totalDays}</h4>
+            <p>完成度 ${progress}%</p>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap: 12px; flex-wrap: wrap;">
+          ${State.daily.goals.map(goal => {
+            const completedToday = State.daily.logs.find(l => l.date === todayStr)?.completedItems.includes(goal.id);
+            return `
+              <div style="padding: 10px 16px; border-radius: 50px; background: ${completedToday ? 'var(--daily-bg)' : 'var(--color-bg-alt)'}; display:flex; align-items:center; gap: 8px; font-size: 13px;">
+                <span>${goal.icon}</span>
+                <span>${goal.title}</span>
+                <button onclick="toggleGoal('${goal.id}')" style="background:none; border:none; cursor:pointer; font-size: 16px;">
+                  ${completedToday ? '✅' : '⬜'}
+                </button>
+              </div>
+            `;
+          }).join('')}
+          <button onclick="addGoal()" style="padding: 10px 16px; border-radius: 50px; border: 2px dashed var(--color-border); background: transparent; cursor: pointer; font-size: 13px; color: var(--color-text-light);">+ 添加目标</button>
         </div>
       </div>
       
-      <div style="display:flex; gap: 12px; flex-wrap: wrap;">
-        ${State.daily.goals.map(goal => {
-          const completedToday = State.daily.logs.find(l => l.date === todayStr)?.completedItems.includes(goal.id);
-          return `
-            <div style="padding: 10px 16px; border-radius: 50px; background: ${completedToday ? 'var(--daily-bg)' : 'var(--color-bg-alt)'}; display:flex; align-items:center; gap: 8px; font-size: 13px;">
-              <span>${goal.icon}</span>
-              <span>${goal.title}</span>
-              <button onclick="toggleGoal('${goal.id}')" style="background:none; border:none; cursor:pointer; font-size: 16px;">
-                ${completedToday ? '✅' : '⬜'}
-              </button>
+      <div class="scroll-date-bar" id="scrollDateBar">
+        ${weekDays.map(d => `
+          <div class="scroll-date-card ${d.isToday ? 'today' : ''} ${d.isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''} ${d.hasLearnPoint || d.hasReview ? 'checked' : ''}" 
+               onclick="selectDailyDate('${d.date}')">
+            <div class="scroll-date-day">${d.day}</div>
+            <div class="scroll-date-date">${d.dayNum}</div>
+            <div class="scroll-date-status">
+              ${d.hasLearnPoint ? '💡' : ''}${d.hasReview ? '📝' : ''}${!d.hasLearnPoint && !d.hasReview && !d.isFuture ? '·' : ''}
             </div>
-          `;
-        }).join('')}
-        <button onclick="addGoal()" style="padding: 10px 16px; border-radius: 50px; border: 2px dashed var(--color-border); background: transparent; cursor: pointer; font-size: 13px; color: var(--color-text-light);">+ 添加目标</button>
+          </div>
+        `).join('')}
       </div>
-    </div>
-    
-    <div class="scroll-date-bar" id="scrollDateBar">
-      ${weekDays.map(d => `
-        <div class="scroll-date-card ${d.isToday ? 'today' : ''} ${d.isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''} ${d.hasLearnPoint || d.hasReview ? 'checked' : ''}" 
-             onclick="selectDailyDate('${d.date}')">
-          <div class="scroll-date-day">${d.day}</div>
-          <div class="scroll-date-date">${d.dayNum}</div>
-          <div class="scroll-date-status">
-            ${d.hasLearnPoint ? '💡' : ''}${d.hasReview ? '📝' : ''}${!d.hasLearnPoint && !d.hasReview && !d.isFuture ? '·' : ''}
+      
+      <div class="selected-date-reflection">
+        <div class="selected-date-reflection-title">📅 ${formatDate(selectedDate)} ${selectedDate === todayStr ? '（今天）' : ''}</div>
+        <div class="reflection-card" style="margin-bottom: 12px;">
+          <div class="reflection-header">
+            <span class="reflection-icon">💡</span>
+            <span class="reflection-title">今天学到 / 想到的一个点</span>
+          </div>
+          <textarea class="reflection-input" id="selectedLearnInput" placeholder="写下这一天的收获..." rows="2">${reflection?.learnPoint || ''}</textarea>
+        </div>
+        <div class="reflection-card review-card">
+          <div class="reflection-header">
+            <span class="reflection-icon">📝</span>
+            <span class="reflection-title">简短复盘</span>
+          </div>
+          <div class="review-item">
+            <label class="review-label">✅ 做得不错</label>
+            <input type="text" class="review-input" id="selectedReviewGoodInput" placeholder="今天做得好的地方" value="${reflection?.reviewGood || ''}">
+          </div>
+          <div class="review-item">
+            <label class="review-label">🔄 想微调</label>
+            <input type="text" class="review-input" id="selectedReviewTweakInput" placeholder="下次想改进的地方" value="${reflection?.reviewTweak || ''}">
+          </div>
+          <div style="text-align: right; margin-top: 10px;">
+            <button class="btn btn-primary btn-sm" onclick="saveDailyReflection('${selectedDate}')">保存</button>
           </div>
         </div>
-      `).join('')}
-    </div>
-    
-    <div class="selected-date-reflection">
-      <div class="selected-date-reflection-title">📅 ${formatDate(selectedDate)} ${selectedDate === todayStr ? '（今天）' : ''}</div>
-      <div class="reflection-card" style="margin-bottom: 12px;">
-        <div class="reflection-header">
-          <span class="reflection-icon">💡</span>
-          <span class="reflection-title">今天学到 / 想到的一个点</span>
-        </div>
-        <textarea class="reflection-input" id="selectedLearnInput" placeholder="写下这一天的收获..." rows="2">${reflection?.learnPoint || ''}</textarea>
       </div>
-      <div class="reflection-card review-card">
-        <div class="reflection-header">
-          <span class="reflection-icon">📝</span>
-          <span class="reflection-title">简短复盘</span>
+      
+      <div class="card" style="margin-top: 16px;">
+        <div class="card-title">📝 本周总结</div>
+        <div class="input-group">
+          <label>总结</label>
+          <textarea id="weekSummary" placeholder="本周做了什么？有哪些收获？">${State.daily.weekSummary || ''}</textarea>
         </div>
-        <div class="review-item">
-          <label class="review-label">✅ 做得不错</label>
-          <input type="text" class="review-input" id="selectedReviewGoodInput" placeholder="今天做得好的地方" value="${reflection?.reviewGood || ''}">
+        <div class="input-group">
+          <label>心得反思</label>
+          <textarea id="weekReflection" placeholder="反思一下这周的成长和改进方向...">${State.daily.weekReflection || ''}</textarea>
         </div>
-        <div class="review-item">
-          <label class="review-label">🔄 想微调</label>
-          <input type="text" class="review-input" id="selectedReviewTweakInput" placeholder="下次想改进的地方" value="${reflection?.reviewTweak || ''}">
-        </div>
-        <div style="text-align: right; margin-top: 10px;">
-          <button class="btn btn-primary btn-sm" onclick="saveDailyReflection('${selectedDate}')">保存</button>
-        </div>
+        <button class="btn btn-primary" onclick="saveWeekSummary()">保存总结</button>
       </div>
     </div>
     
-    <div class="card" style="margin-top: 16px;">
-      <div class="card-title">📝 本周总结</div>
-      <div class="input-group">
-        <label>总结</label>
-        <textarea id="weekSummary" placeholder="本周做了什么？有哪些收获？">${State.daily.weekSummary || ''}</textarea>
+    <div class="module-tab-content" id="tab-history" style="display:none;">
+      <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-box">
+          <div class="stat-box-label">总记录天数</div>
+          <div class="stat-box-value" style="color: var(--daily-primary);">${totalReflections}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">学到/想到</div>
+          <div class="stat-box-value" style="color: var(--color-success);">${totalLearnPoints}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">复盘记录</div>
+          <div class="stat-box-value" style="color: var(--tasks-primary);">${totalReviews}</div>
+        </div>
       </div>
-      <div class="input-group">
-        <label>心得反思</label>
-        <textarea id="weekReflection" placeholder="反思一下这周的成长和改进方向...">${State.daily.weekReflection || ''}</textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveWeekSummary()">保存总结</button>
+      
+      ${allReflections.length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-state-icon">📊</div>
+          <div class="empty-state-text">还没有记录，开始记录你的成长吧</div>
+        </div>
+      ` : `
+        <div class="history-list">
+          ${allReflections.sort((a, b) => b.date.localeCompare(a.date)).map(r => `
+            <div class="history-item">
+              <div class="history-date">📅 ${formatDate(r.date)} ${r.date === todayStr ? '（今天）' : ''}</div>
+              ${r.learnPoint ? `<div class="history-point">💡 <strong>学到:</strong> ${r.learnPoint}</div>` : ''}
+              ${r.reviewGood ? `<div class="history-point good">✅ <strong>做得不错:</strong> ${r.reviewGood}</div>` : ''}
+              ${r.reviewTweak ? `<div class="history-point tweak">🔄 <strong>想微调:</strong> ${r.reviewTweak}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
   `;
+  
+  // 标签切换
+  document.querySelectorAll('.daily-tabs .module-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.daily-tabs .module-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.module-tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    });
+  });
   
   const scrollBar = document.getElementById('scrollDateBar');
   if (scrollBar) {
@@ -3124,37 +3272,7 @@ window.showAIPlan = function() {
 
 // 打开豆包APP
 function openDoubaoAPP() {
-  const ua = navigator.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua);
-  const isAndroid = /android/.test(ua);
-  
-  // 豆包APP的URL Scheme
-  const doubaoScheme = 'doubao://';
-  // 豆包网页版作为fallback
-  const doubaoWeb = 'https://www.doubao.com/';
-  
-  if (isAndroid) {
-    // Android: 使用intent scheme
-    const intentUrl = `intent://#Intent;scheme=doubao;package=com.ss.android.ugc.aweme;end`;
-    window.location.href = intentUrl;
-    // 如果1.5秒内没有跳转成功，则打开网页版
-    setTimeout(() => {
-      if (!document.hidden) {
-        window.location.href = doubaoWeb;
-      }
-    }, 1500);
-  } else if (isIOS) {
-    // iOS: 直接尝试URL Scheme
-    window.location.href = doubaoScheme;
-    setTimeout(() => {
-      if (!document.hidden) {
-        window.location.href = doubaoWeb;
-      }
-    }, 1500);
-  } else {
-    // 桌面端: 打开网页版
-    window.open(doubaoWeb, '_blank');
-  }
+  openAppOrWeb('doubao', 'https://www.doubao.com/');
 }
 
 function fetchDoubaoAI(question, apiKey) {
