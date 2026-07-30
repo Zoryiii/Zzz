@@ -1,0 +1,10 @@
+[60560:60576:0730/015920.882:WARNING:data_router_sender.cpp(28)] [DataRouterSender] RegisterReceiver not supported on sender side, route=/sg_tool/./pingback_receiver
+[60560:60576:0730/015920.931:WARNING:t_skinfilemap.cpp(56)] SGRenderLog:CheckUpdate newMem.OpenMem failed, szNewMem:Local\sgime_skin.v4.filemap.sogouime err:系统错误2: 系统找不到指定的文件。  
+打开Filemap失败: Local\sgime_skin.v4.filemap.sogouime40297f0bad7
+[60560:60576:0730/015920.931:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[60560:60576:0730/015920.931:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:4
+[60560:60576:0730/015920.988:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.Dpi192.v4.filemap.sogouime
+[60560:60576:0730/015920.988:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:4
+[60560:60576:0730/015920.988:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:4
+[60560:48196:0730/015930.389:WARNING:kernel_switch.cc(128)] [Engine] GetProductDataInfo failed for: input_cloud_request_rank_1
+[60560:48196:0730/015930.389:WARNING:kernel_switch.cc(128)] [Engine] GetProductDataInfo failed for: input_cloud_request_type_1

@@ -6,15 +6,15 @@
   <meta name="theme-color" content="#B54A3A">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="鈡净毓">
+  <meta name="apple-mobile-web-app-title" content="毓">
   <meta name="referrer" content="no-referrer">
-  <title>鈡净毓 · 个人工作台</title>
+  <title>毓 · 个人工作台</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="public/images/app-icon.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
   <div id="app">
@@ -26,24 +26,24 @@
       <div class="sidebar-brand" id="brandArea" title="点击更换品牌图片 · 双击恢复默认">
         <div class="brand-seal" id="brandSeal">鈡</div>
         <div class="brand-info">
-          <h1>鈡净毓</h1>
+          <h1>毓</h1>
           <span>个人工作台</span>
         </div>
         <input type="file" id="brandUpload" accept="image/*" style="display:none;">
       </div>
       <nav class="nav-menu" id="navMenu">
         <a href="#/" class="nav-item active" data-route="/"><span class="nav-idx">01</span><span class="nav-lbl">首页</span></a>
-        <a href="#/accounting" class="nav-item" data-route="/accounting"><span class="nav-idx">02</span><span class="nav-lbl">记账</span></a>
+        <a href="#/daily" class="nav-item" data-route="/daily"><span class="nav-idx">02</span><span class="nav-lbl">日常记录</span></a>
         <a href="#/tasks" class="nav-item" data-route="/tasks"><span class="nav-idx">03</span><span class="nav-lbl">任务待办</span></a>
         <a href="#/calligraphy" class="nav-item" data-route="/calligraphy"><span class="nav-idx">04</span><span class="nav-lbl">练字</span></a>
         <a href="#/english" class="nav-item" data-route="/english"><span class="nav-idx">05</span><span class="nav-lbl">英语学习</span></a>
-        <a href="#/films" class="nav-item" data-route="/films"><span class="nav-idx">06</span><span class="nav-lbl">影集</span></a>
-        <a href="#/photos" class="nav-item" data-route="/photos"><span class="nav-idx">07</span><span class="nav-lbl">相册</span></a>
-        <a href="#/inspiration" class="nav-item" data-route="/inspiration"><span class="nav-idx">08</span><span class="nav-lbl">灵感一现</span></a>
-        <a href="#/sports" class="nav-item" data-route="/sports"><span class="nav-idx">09</span><span class="nav-lbl">运动集</span></a>
-        <a href="#/daily" class="nav-item" data-route="/daily"><span class="nav-idx">10</span><span class="nav-lbl">日常记录</span></a>
-        <a href="#/news" class="nav-item" data-route="/news"><span class="nav-idx">11</span><span class="nav-lbl">每日新闻</span></a>
-        <a href="#/ai" class="nav-item" data-route="/ai"><span class="nav-idx">12</span><span class="nav-lbl">AI技巧库</span></a>
+        <a href="#/ai" class="nav-item" data-route="/ai"><span class="nav-idx">06</span><span class="nav-lbl">阅读</span></a>
+        <a href="#/films" class="nav-item" data-route="/films"><span class="nav-idx">07</span><span class="nav-lbl">影集</span></a>
+        <a href="#/photos" class="nav-item" data-route="/photos"><span class="nav-idx">08</span><span class="nav-lbl">相册</span></a>
+        <a href="#/inspiration" class="nav-item" data-route="/inspiration"><span class="nav-idx">09</span><span class="nav-lbl">灵感一现</span></a>
+        <a href="#/sports" class="nav-item" data-route="/sports"><span class="nav-idx">10</span><span class="nav-lbl">运动集</span></a>
+        <a href="#/accounting" class="nav-item" data-route="/accounting"><span class="nav-idx">11</span><span class="nav-lbl">记账</span></a>
+        <a href="#/news" class="nav-item" data-route="/news"><span class="nav-idx">12</span><span class="nav-lbl">每日新闻</span></a>
       </nav>
       <div class="sidebar-footer">
         <span id="currentDate"></span>
@@ -74,11 +74,14 @@
     </div>
     <div class="ai-float-panel" id="aiFloatPanel">
       <div class="ai-float-header">
-        <span>AI 助手</span>
-        <button class="ai-float-close" id="aiFloatClose">✕</button>
+        <span>豆包 AI 助手</span>
+        <div>
+          <button class="ai-float-close" id="aiFloatConfig" title="设置">⚙️</button>
+          <button class="ai-float-close" id="aiFloatClose">✕</button>
+        </div>
       </div>
       <div class="ai-float-content" id="aiFloatContent">
-        <p>你好！我是AI助手，有什么可以帮你的？</p>
+        <p>你好！我是豆包 AI 助手，有什么可以帮你的？</p>
         <div class="ai-quick-actions">
           <button onclick="showAIInspiration()">💡 生成灵感</button>
           <button onclick="showAIQuote()">📝 每日一句</button>
@@ -94,8 +97,8 @@
     <button class="ai-float-tab" id="aiFloatTab" title="点击展开AI助手">AI</button>
   </div>
 
-  <script src="data.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="data.js?v=15"></script>
+  <script src="app.js?v=15"></script>
   <script>
     // 注册 Service Worker（PWA离线支持）
     if ('serviceWorker' in navigator) {

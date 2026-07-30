@@ -1,5 +1,5 @@
 /* ========================================
-   鈡净毓 · 个人工作台 - 主应用
+   毓 · 个人工作台 - 主应用
    ======================================== */
 
 // ========================================
@@ -93,6 +93,44 @@ function formatDate(dateStr) {
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function compressImage(file, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round(height * maxWidth / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function openAppOrWeb(appScheme, webUrl) {
+  const startTime = Date.now();
+  const timer = setTimeout(() => {
+    if (Date.now() - startTime < 2500) {
+      window.location.href = webUrl;
+    }
+  }, 2000);
+  window.location.href = appScheme;
+  window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
 }
 
 function showToast(message, type = 'info') {
@@ -208,7 +246,7 @@ function renderHome(main) {
     <div class="home-hero">
       <div class="home-hero-bg"></div>
       <div class="home-hero-content">
-        <h2>鈡净毓 · ${greeting}</h2>
+        <h2>毓 · ${greeting}</h2>
         <p>愿今日也是温柔而充实的一天</p>
         <div class="home-date">${dateStr}</div>
       </div>
@@ -282,11 +320,28 @@ function renderAccounting(main) {
   const totalExpense = State.accounting.filter(a => a.type === 'expense').reduce((s, a) => s + a.amount, 0);
   const totalIncome = State.accounting.filter(a => a.type === 'income').reduce((s, a) => s + a.amount, 0);
   
-  // 按分类统计
   const categoryStats = {};
   State.accounting.filter(a => a.type === 'expense').forEach(a => {
     categoryStats[a.category] = (categoryStats[a.category] || 0) + a.amount;
   });
+  
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStart = formatDate(lastMonth);
+  const lastMonthEnd = formatDate(new Date(now.getFullYear(), now.getMonth(), 0));
+  
+  const lastMonthRecords = State.accounting.filter(a => {
+    const d = new Date(a.date);
+    return d >= new Date(lastMonthStart) && d <= new Date(lastMonthEnd + 'T23:59:59');
+  });
+  const lastMonthExpense = lastMonthRecords.filter(a => a.type === 'expense').reduce((s, a) => s + a.amount, 0);
+  const lastMonthIncome = lastMonthRecords.filter(a => a.type === 'income').reduce((s, a) => s + a.amount, 0);
+  const lastMonthCategoryStats = {};
+  lastMonthRecords.filter(a => a.type === 'expense').forEach(a => {
+    lastMonthCategoryStats[a.category] = (lastMonthCategoryStats[a.category] || 0) + a.amount;
+  });
+  const topCategory = Object.entries(lastMonthCategoryStats).sort((a, b) => b[1] - a[1])[0];
+  const topCatName = topCategory ? (ACCOUNT_CATEGORIES.expense.find(c => c.id === topCategory[0])?.name || topCategory[0]) : '-';
   
   main.innerHTML = `
     ${createPageHeader('记账', '记录生活中的每一笔', 'accounting')}
@@ -310,84 +365,119 @@ function renderAccounting(main) {
       </div>
     </div>
     
-    ${Object.keys(categoryStats).length > 0 ? `
-      <div class="chart-container">
-        <div class="chart-title">分类占比</div>
-        <div class="ring-chart">
-          <svg viewBox="0 0 36 36">
-            ${generateRingChart(categoryStats, totalExpense)}
-          </svg>
-          <div class="ring-legend">
-            ${Object.entries(categoryStats).map(([cat, amt], i) => {
-              const colors = ['#B54A3A', '#E8A87C', '#87CEEB', '#8BA888', '#D4A574', '#FF7F50', '#9FC4C4', '#C45A5A'];
-              const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : 0;
-              const catInfo = ACCOUNT_CATEGORIES.expense.find(c => c.id === cat);
-              return `<div class="ring-legend-item"><div class="ring-legend-color" style="background:${colors[i % colors.length]}"></div>${catInfo?.name || cat} ¥${amt.toFixed(0)} (${pct}%)</div>`;
-            }).join('')}
+    <div class="module-tabs accounting-tabs">
+      <button class="module-tab active" data-tab="detail">💰 明细</button>
+      <button class="module-tab" data-tab="finance">📈 理财</button>
+    </div>
+    
+    <div class="module-tab-content active" id="tab-detail">
+      <div class="monthly-summary">
+        <div class="monthly-summary-title">📊 上月总结</div>
+        <div class="monthly-summary-grid">
+          <div class="monthly-summary-item">
+            <div class="monthly-summary-value expense">¥${lastMonthExpense.toFixed(0)}</div>
+            <div class="monthly-summary-label">总支出</div>
+          </div>
+          <div class="monthly-summary-item">
+            <div class="monthly-summary-value income">¥${lastMonthIncome.toFixed(0)}</div>
+            <div class="monthly-summary-label">总收入</div>
+          </div>
+          <div class="monthly-summary-item">
+            <div class="monthly-summary-value balance">¥${(lastMonthIncome - lastMonthExpense).toFixed(0)}</div>
+            <div class="monthly-summary-label">结余</div>
+          </div>
+          <div class="monthly-summary-item">
+            <div class="monthly-summary-value" style="font-size:16px; color: var(--accounting-primary);">${topCatName}</div>
+            <div class="monthly-summary-label">支出最多</div>
           </div>
         </div>
       </div>
-    ` : ''}
-    
-    <div class="tip-card">
-      <div class="tip-icon">🐷</div>
-      <div class="tip-content">
-        <div class="tip-title">理财小知识</div>
-        <div class="tip-text">${FINANCIAL_TIPS[getDailyIndex(FINANCIAL_TIPS)]}</div>
+      
+      ${Object.keys(categoryStats).length > 0 ? `
+        <div class="chart-container">
+          <div class="chart-title">分类占比</div>
+          <div class="ring-chart">
+            <svg viewBox="0 0 36 36">
+              ${generateRingChart(categoryStats, totalExpense)}
+            </svg>
+            <div class="ring-legend">
+              ${Object.entries(categoryStats).map(([cat, amt], i) => {
+                const colors = ['#B54A3A', '#E8A87C', '#87CEEB', '#8BA888', '#D4A574', '#FF7F50', '#9FC4C4', '#C45A5A'];
+                const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : 0;
+                const catInfo = ACCOUNT_CATEGORIES.expense.find(c => c.id === cat);
+                return `<div class="ring-legend-item"><div class="ring-legend-color" style="background:${colors[i % colors.length]}"></div>${catInfo?.name || cat} ¥${amt.toFixed(0)} (${pct}%)</div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      ` : ''}
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin: 16px 0;">
+        <h2 style="font-size: 18px; font-weight: 600;">账目明细</h2>
+        <button class="btn btn-primary" onclick="openAccountingModal()">+ 添加记录</button>
+      </div>
+      
+      <div class="accounting-list">
+        ${State.accounting.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-icon">💰</div>
+            <div class="empty-state-text">还没有记录，点击上方按钮开始记账吧</div>
+          </div>
+        ` : State.accounting.map(item => {
+          const catList = ACCOUNT_CATEGORIES[item.type];
+          const cat = catList.find(c => c.id === item.category) || { name: item.category, icon: '📝' };
+          return `
+            <div class="accounting-item ${item.type}">
+              <div class="accounting-icon">${cat.icon}</div>
+              <div class="accounting-details">
+                <div class="accounting-category">${cat.name}</div>
+                ${item.note ? `<div class="accounting-note">${item.note}</div>` : ''}
+              </div>
+              <div>
+                <div class="accounting-amount">${item.type === 'income' ? '+' : '-'}¥${item.amount.toFixed(2)}</div>
+                <div class="accounting-date">${formatDate(item.date)}</div>
+              </div>
+              <button class="btn btn-ghost" onclick="deleteAccounting('${item.id}')" style="margin-left: 8px;">🗑️</button>
+            </div>
+          `;
+        }).join('')}
       </div>
     </div>
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-      <h2 style="font-size: 18px; font-weight: 600;">账目明细</h2>
-      <button class="btn btn-primary" onclick="openAccountingModal()">+ 添加记录</button>
-    </div>
-    
-    <!-- 理财学习中心 -->
-    <h2 style="font-size: 18px; font-weight: 600; margin: 28px 0 14px;">📚 理财学习中心</h2>
-    <div class="finance-edu-grid">
-      ${FINANCE_ARTICLES.map(article => `
-        <div class="finance-edu-card" onclick="openFinanceArticle('${article.id}')">
-          <div class="finance-edu-header">
-            <div class="finance-edu-icon">${article.icon}</div>
-            <div class="finance-edu-tag">${article.tag}</div>
-          </div>
-          <div class="finance-edu-title">${article.title}</div>
-          <div class="finance-edu-desc">${article.desc}</div>
-          <div class="finance-edu-point">💡 ${article.point}</div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-            <div class="finance-edu-action">深入阅读 →</div>
-            <a href="${article.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accounting-primary); font-size: 12px; text-decoration: none;">📎 查看原文</a>
-          </div>
+    <div class="module-tab-content" id="tab-finance">
+      <div class="tip-card">
+        <div class="tip-icon">🐷</div>
+        <div class="tip-content">
+          <div class="tip-title">理财小知识</div>
+          <div class="tip-text">${FINANCIAL_TIPS[getDailyIndex(FINANCIAL_TIPS)]}</div>
         </div>
-      `).join('')}
-    </div>
-    
-    <div class="accounting-list">
-      ${State.accounting.length === 0 ? `
-        <div class="empty-state">
-          <div class="empty-state-icon">💰</div>
-          <div class="empty-state-text">还没有记录，点击上方按钮开始记账吧</div>
-        </div>
-      ` : State.accounting.map(item => {
-        const catList = ACCOUNT_CATEGORIES[item.type];
-        const cat = catList.find(c => c.id === item.category) || { name: item.category, icon: '📝' };
-        return `
-          <div class="accounting-item ${item.type}">
-            <div class="accounting-icon">${cat.icon}</div>
-            <div class="accounting-details">
-              <div class="accounting-category">${cat.name}</div>
-              ${item.note ? `<div class="accounting-note">${item.note}</div>` : ''}
+      </div>
+      
+      <h2 style="font-size: 18px; font-weight: 600; margin: 24px 0 14px;">📚 理财学习中心</h2>
+      <div>
+        ${FINANCE_ARTICLES.map(article => `
+          <div class="finance-article-simple">
+            <div class="finance-article-icon">${article.icon}</div>
+            <div class="finance-article-info">
+              <div class="finance-article-title">${article.title}</div>
+              <div class="finance-article-desc">${article.desc}</div>
             </div>
-            <div>
-              <div class="accounting-amount">${item.type === 'income' ? '+' : '-'}¥${item.amount.toFixed(2)}</div>
-              <div class="accounting-date">${formatDate(item.date)}</div>
-            </div>
-            <button class="btn btn-ghost" onclick="deleteAccounting('${item.id}')" style="margin-left: 8px;">🗑️</button>
+            <a href="${article.url}" target="_blank" class="finance-article-read">阅读全文</a>
           </div>
-        `;
-      }).join('')}
+        `).join('')}
+      </div>
     </div>
   `;
+  
+  document.querySelectorAll('.module-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.module-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.module-tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    });
+  });
 }
 
 function generateRingChart(stats, total) {
@@ -659,21 +749,28 @@ function renderCalligraphy(main, params) {
     </div>
     
     <h2 style="font-size: 18px; font-weight: 600; margin: 24px 0 16px;">📚 学习资源</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-      <a href="https://www.douyin.com/search/练字" target="_blank" style="padding: 20px; background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+      <div onclick="openAppOrWeb('snssdk1128://webview?url=https%3A%2F%2Fwww.douyin.com%2Fsearch%2F%E7%BB%83%E5%AD%97', 'https://www.douyin.com/search/练字')" style="padding: 20px; background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <div style="font-size: 36px;">🎵</div>
         <div>
           <div style="font-weight: 600; margin-bottom: 4px;">抖音搜索</div>
           <div style="font-size: 12px; color: #666;">搜索练字视频教程</div>
         </div>
-      </a>
-      <a href="https://music.163.com" target="_blank" style="padding: 20px; background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+      </div>
+      <div onclick="openAppOrWeb('bilibili://', 'https://search.bilibili.com/all?keyword=练字教程')" style="padding: 20px; background: linear-gradient(135deg, #e6f4ff 0%, #cceaff 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+        <div style="font-size: 36px;">📺</div>
+        <div>
+          <div style="font-weight: 600; margin-bottom: 4px;">B站教程</div>
+          <div style="font-size: 12px; color: #666;">丰富练字教学视频</div>
+        </div>
+      </div>
+      <div onclick="openAppOrWeb('netease://', 'https://music.163.com')" style="padding: 20px; background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%); border-radius: 12px; text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <div style="font-size: 36px;">🎶</div>
         <div>
           <div style="font-weight: 600; margin-bottom: 4px;">网易云音乐</div>
           <div style="font-size: 12px; color: #666;">听歌学歌词</div>
         </div>
-      </a>
+      </div>
     </div>
     
     <div style="margin-top: 16px; text-align: right;">
@@ -822,23 +919,40 @@ window.openAddGoodCharModal = function() {
   showModal(`
     <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">添加好字照片</h2>
     <div class="input-group">
-      <label>照片链接</label>
-      <input type="text" id="goodCharInput" placeholder="粘贴照片URL地址">
+      <label>选择照片</label>
+      <input type="file" id="goodCharFile" accept="image/*" capture="environment" class="file-upload-btn">
     </div>
+    <div class="image-preview" id="goodCharPreview" style="display:none;"></div>
     <div class="input-group">
       <label>备注（选填）</label>
       <input type="text" id="goodCharSource" placeholder="如：临摹《兰亭序》">
     </div>
     <button class="btn btn-primary btn-block" onclick="saveGoodChar()">保存</button>
-  `);
+  `, (content) => {
+    const fileInput = content.querySelector('#goodCharFile');
+    const preview = content.querySelector('#goodCharPreview');
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImage(file, 800);
+        preview.style.display = 'block';
+        preview.innerHTML = `<img src="${dataUrl}" alt="预览" style="max-width:100%; max-height:200px; border-radius:8px;">`;
+        preview.dataset.url = dataUrl;
+      } catch (err) {
+        showToast('图片处理失败', 'error');
+      }
+    });
+  });
 };
 
 window.saveGoodChar = function() {
-  const photoUrl = document.getElementById('goodCharInput').value.trim();
+  const preview = document.getElementById('goodCharPreview');
+  const photoUrl = preview?.dataset.url;
   const source = document.getElementById('goodCharSource').value.trim();
   
   if (!photoUrl) {
-    showToast('请输入照片链接', 'error');
+    showToast('请先选择照片', 'error');
     return;
   }
   
@@ -1016,16 +1130,29 @@ function renderEnglish(main) {
           <div class="resource-name">Grammarly</div>
           <div class="resource-desc">写作语法检查</div>
         </a>
-        <a class="resource-card" href="https://www.youdao.com/" target="_blank">
+        <a class="resource-card" onclick="openAppOrWeb('eudic://', 'https://www.eudic.net')" href="javascript:void(0)">
           <div class="resource-icon">📖</div>
           <div class="resource-name">欧路词典</div>
           <div class="resource-desc">英汉双解词典</div>
         </a>
-        <a class="resource-card" href="https://www.oxfordlearnersbookshelf.com/" target="_blank">
+        <a class="resource-card" href="https://www.oxfordlearnersdictionaries.com/" target="_blank">
           <div class="resource-icon">📚</div>
           <div class="resource-name">牛津学习</div>
           <div class="resource-desc">牛津词典在线</div>
         </a>
+      </div>
+      
+      <div class="card" style="margin-top: 16px;">
+        <div class="card-title">📻 BBC Learning English 精选</div>
+        <div class="bbc-articles">
+          ${(BBC_ARTICLES || []).map(article => `
+            <a href="${article.url}" target="_blank" class="bbc-article-link">
+              <span class="bbc-level-tag">${article.level}</span>
+              <span class="bbc-article-title">${article.title}</span>
+              <span class="bbc-article-arrow">→</span>
+            </a>
+          `).join('')}
+        </div>
       </div>
     </div>
     
@@ -1117,9 +1244,38 @@ window.startShadowing = function() {
     saveState('englishLogs');
   };
   
+  const simulateScoring = () => {
+    showToast('语音识别不可用，启动模拟评分...', 'info');
+    resultDiv.style.display = 'block';
+    scoreCircle.textContent = '...';
+    scoreTips.innerHTML = '<div style="font-size:13px;">正在模拟评分，请大声朗读句子...</div>';
+    
+    setTimeout(() => {
+      const target = sentence.replace(/[^a-zA-Z\s']/g, '').toLowerCase().trim();
+      const tw = target.split(/\s+/);
+      const wordCount = tw.length;
+      
+      const simScores = [
+        () => { scoreCircle.textContent = '32'; scoreTips.innerHTML = '<div style="font-weight:600;">📖 模拟评分：较差</div><div style="font-size:13px;">模拟朗读识别结果，多读几遍试试！</div>'; },
+        () => { scoreCircle.textContent = '58'; scoreTips.innerHTML = '<div style="font-weight:600;">💪 模拟评分：及格</div><div style="font-size:13px;">能识别大部分单词，继续练习！</div>'; },
+        () => { scoreCircle.textContent = '76'; scoreTips.innerHTML = '<div style="font-weight:600;">😊 模拟评分：良好</div><div style="font-size:13px;">发音不错，注意连读和语调。</div>'; },
+        () => { scoreCircle.textContent = '91'; scoreTips.innerHTML = '<div style="font-weight:600;">🌟 模拟评分：优秀</div><div style="font-size:13px;">非常棒！继续保持！</div>'; }
+      ];
+      const randomIdx = Math.floor(Math.random() * simScores.length);
+      simScores[randomIdx]();
+      
+      const today = getToday();
+      let log = State.englishLogs.find(l => l.date === today);
+      if (!log) { log = { date: today, attempts: 0, bestScore: 0 }; State.englishLogs.push(log); }
+      log.attempts++;
+      const currentScore = parseInt(scoreCircle.textContent) || 0;
+      log.bestScore = Math.max(log.bestScore, currentScore);
+      saveState('englishLogs');
+    }, 2000);
+  };
+  
   if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-    showToast('模拟评分模式', 'info');
-    setTimeout(() => doScoring(sentence), 500);
+    simulateScoring();
     return;
   }
   
@@ -1127,7 +1283,7 @@ window.startShadowing = function() {
   rec.lang = 'en-US'; rec.interimResults = false;
   showToast('请开始说话...', 'info');
   rec.onresult = e => doScoring(e.results[0][0].transcript);
-  rec.onerror = () => showToast('识别失败，已切换模拟评分', 'error');
+  rec.onerror = () => { showToast('识别失败，已切换模拟评分', 'error'); simulateScoring(); };
   rec.start();
 };
 
@@ -1210,8 +1366,37 @@ function renderFilms(main) {
   main.innerHTML = `
     ${createPageHeader('影集', '记录每一次观影的感动', 'films')}
     
+    <div style="display:flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0;">🎬 我的观影记录</h2>
+      <div style="flex:1;"></div>
+      <button class="btn btn-primary" onclick="openFilmModal()">+ 添加影片</button>
+    </div>
+    
+    <div class="film-grid" id="filmGrid" style="margin-bottom: 32px;">
+      ${State.films.length === 0 ? `
+        <div class="empty-state" style="grid-column: 1/-1;">
+          <div class="empty-state-icon">🎬</div>
+          <div class="empty-state-text">还没有观影记录，从下方推荐开始吧</div>
+        </div>
+      ` : State.films.map(film => `
+        <div class="film-card" onclick="openFilmModal('${film.id}')">
+          <div class="film-poster">
+            <span style="font-size: 48px;">🎬</span>
+            ${film.rating ? `<div class="film-rating">★ ${film.rating}</div>` : ''}
+          </div>
+          <div class="film-body">
+            <div class="film-title">${film.title}</div>
+            <div class="film-genre">${film.type}</div>
+            ${film.reason ? `<div class="film-reason">💡 ${film.reason}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div style="border-top: 1px solid #eee; margin: 24px 0;"></div>
+    
     <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 16px;">🏆 高分经典电影推荐</h2>
-    <div class="film-grid" style="margin-bottom: 32px;">
+    <div class="film-grid">
       ${CLASSIC_FILMS.map(film => `
         <div class="film-card">
           <div class="film-poster" onclick="showFilmDetail('${film.id}')" style="background: var(--films-bg);">
@@ -1226,35 +1411,6 @@ function renderFilms(main) {
               <a href="https://search.bilibili.com/all?keyword=${encodeURIComponent(film.title)}" target="_blank" class="film-watch-link">▶ 观影</a>
               <button class="film-add-btn" onclick="addClassicFilm('${film.id}')">+ 添加到观影记录</button>
             </div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-    
-    <div style="border-top: 1px solid #eee; margin: 24px 0;"></div>
-    
-    <div style="display:flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
-      <h2 style="font-size: 18px; font-weight: 600; margin: 0;">🎬 我的观影记录</h2>
-      <div style="flex:1;"></div>
-      <button class="btn btn-primary" onclick="openFilmModal()">+ 添加影片</button>
-    </div>
-    
-    <div class="film-grid" id="filmGrid">
-      ${State.films.length === 0 ? `
-        <div class="empty-state" style="grid-column: 1/-1;">
-          <div class="empty-state-icon">🎬</div>
-          <div class="empty-state-text">还没有观影记录，从上方推荐开始吧</div>
-        </div>
-      ` : State.films.map(film => `
-        <div class="film-card" onclick="openFilmModal('${film.id}')">
-          <div class="film-poster">
-            <span style="font-size: 48px;">🎬</span>
-            ${film.rating ? `<div class="film-rating">★ ${film.rating}</div>` : ''}
-          </div>
-          <div class="film-body">
-            <div class="film-title">${film.title}</div>
-            <div class="film-genre">${film.type}</div>
-            ${film.reason ? `<div class="film-reason">💡 ${film.reason}</div>` : ''}
           </div>
         </div>
       `).join('')}
@@ -1442,9 +1598,10 @@ window.openPhotoModal = function() {
   showModal(`
     <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">添加照片</h2>
     <div class="input-group">
-      <label>图片URL</label>
-      <input type="text" id="photoUrl" placeholder="输入图片链接">
+      <label>选择照片</label>
+      <input type="file" id="photoFile" accept="image/*" capture="environment" class="file-upload-btn">
     </div>
+    <div class="image-preview" id="photoPreview" style="display:none;"></div>
     <div class="input-group">
       <label>描述</label>
       <input type="text" id="photoCaption" placeholder="照片描述">
@@ -1458,21 +1615,39 @@ window.openPhotoModal = function() {
       <input type="text" id="photoLocation" placeholder="拍摄地点">
     </div>
     <button class="btn btn-primary btn-block" onclick="savePhoto()">保存</button>
-  `);
+  `, (content) => {
+    const fileInput = content.querySelector('#photoFile');
+    const preview = content.querySelector('#photoPreview');
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImage(file, 800);
+        preview.style.display = 'block';
+        preview.innerHTML = `<img src="${dataUrl}" alt="预览" style="max-width:100%; max-height:200px; border-radius:8px;">`;
+        preview.dataset.url = dataUrl;
+      } catch (err) {
+        showToast('图片处理失败', 'error');
+      }
+    });
+  });
 };
 
 window.savePhoto = function() {
+  const preview = document.getElementById('photoPreview');
+  const photoUrl = preview?.dataset.url;
+  
+  if (!photoUrl) {
+    showToast('请先选择照片', 'error');
+    return;
+  }
+  
   const data = {
-    url: document.getElementById('photoUrl').value,
+    url: photoUrl,
     caption: document.getElementById('photoCaption').value,
     tags: document.getElementById('photoTags').value.split(',').map(s => s.trim()).filter(Boolean),
     location: document.getElementById('photoLocation').value
   };
-  
-  if (!data.url.trim()) {
-    showToast('请输入图片URL', 'error');
-    return;
-  }
   
   State.photos.push({
     id: generateId(),
@@ -1521,15 +1696,17 @@ function renderInspiration(main) {
     return d.toDateString() === today.toDateString();
   }).length;
   
-  // 今日复盘数据
   const todayStr = getToday();
   const todayReflection = State.dailyReflections.find(r => r.date === todayStr);
   const pendingTaskCount = State.tasks.filter(t => t.status !== 'done').length;
   
+  const savedLearns = State.dailyReflections.filter(r => r.learnPoint).reverse();
+  const savedReflections = State.dailyReflections.filter(r => r.reviewGood || r.reviewTweak).reverse();
+  const savedTags = [...new Set(State.inspirations.flatMap(n => n.tags))];
+  
   main.innerHTML = `
     ${createPageHeader('灵感一现', '捕捉稍纵即逝的想法', 'inspiration')}
     
-    <!-- 学习统计卡片 -->
     <div class="insp-stats">
       <div class="insp-stat-card">
         <div class="insp-stat-num">${totalNotes}</div>
@@ -1549,80 +1726,173 @@ function renderInspiration(main) {
       </div>
     </div>
     
-    <!-- 今日轻量任务（与任务待办同步） -->
-    <div class="today-tasks">
-      <div class="today-tasks-header">
-        <span>📋 今日轻量任务</span>
-        <a href="#/tasks" class="today-tasks-hint">管理任务 →</a>
+    <div class="module-tabs inspiration-tabs">
+      <button class="module-tab active" data-tab="record">✏️ 记录</button>
+      <button class="module-tab" data-tab="history">📖 历史</button>
+    </div>
+    
+    <div class="module-tab-content active" id="tab-record">
+      <div style="display:flex; justify-content:flex-end; margin: 0 0 16px;">
+        <button class="btn btn-primary" onclick="openInspirationModal()">+ 记录灵感</button>
       </div>
-      <div class="today-tasks-list">
-        ${pendingTaskCount === 0 ? `
-          <div class="empty-state" style="padding: 16px;">
-            <div class="empty-state-text" style="font-size:13px;">暂无待办，去任务页面添加吧 ✨</div>
-          </div>
-        ` : State.tasks.filter(t => t.status !== 'done').slice(0, 5).map(task => `
-          <div class="today-task-item ${task.status === 'done' ? 'done' : ''}" onclick="toggleTaskInsp('${task.id}')">
-            <span class="task-check">${task.status === 'done' ? '✅' : '⬜'}</span>
-            <span class="task-name">${task.title}</span>
+      
+      <div class="today-tasks">
+        <div class="today-tasks-header">
+          <span>📋 今日轻量任务</span>
+          <a href="#/tasks" class="today-tasks-hint">管理任务 →</a>
+        </div>
+        <div class="today-tasks-list">
+          ${pendingTaskCount === 0 ? `
+            <div class="empty-state" style="padding: 16px;">
+              <div class="empty-state-text" style="font-size:13px;">暂无待办，去任务页面添加吧 ✨</div>
+            </div>
+          ` : State.tasks.filter(t => t.status !== 'done').slice(0, 5).map(task => `
+            <div class="today-task-item ${task.status === 'done' ? 'done' : ''}" onclick="toggleTaskInsp('${task.id}')">
+              <span class="task-check">${task.status === 'done' ? '✅' : '⬜'}</span>
+              <span class="task-name">${task.title}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="reflection-card">
+        <div class="reflection-header">
+          <span class="reflection-icon">💡</span>
+          <span class="reflection-title">今天学到 / 想到的一个点</span>
+        </div>
+        <div class="reflection-hint">哪怕只是「今天翻了两页」也值得记</div>
+        <textarea class="reflection-input" id="todayLearnInput" placeholder="写下今天的一个小收获..." rows="2">${todayReflection?.learnPoint || ''}</textarea>
+      </div>
+      
+      <div class="reflection-card review-card">
+        <div class="reflection-header">
+          <span class="reflection-icon">📝</span>
+          <span class="reflection-title">简短复盘</span>
+        </div>
+        <div class="reflection-hint">只写两句，写完就放下</div>
+        <div class="review-item">
+          <label class="review-label">✅ 今天做得不错的 1 个点</label>
+          <input type="text" class="review-input" id="reviewGoodInput" placeholder="例如：主动给客户发了跟进消息" value="${todayReflection?.reviewGood || ''}">
+        </div>
+        <div class="review-item">
+          <label class="review-label">🔄 下次想微调的 1 个点</label>
+          <input type="text" class="review-input" id="reviewTweakInput" placeholder="例如：报价前先多问一句需求" value="${todayReflection?.reviewTweak || ''}">
+        </div>
+      </div>
+    </div>
+    
+    <div class="module-tab-content" id="tab-history">
+      <div class="history-section">
+        <div class="history-section-title">💡 历史灵感 (${State.inspirations.length})</div>
+        ${State.inspirations.length === 0 ? `
+          <div class="history-item-empty">还没有灵感记录</div>
+        ` : State.inspirations.slice(-10).reverse().map(note => `
+          <div class="history-item" onclick="viewInspiration('${note.id}')">
+            <div>${note.content.replace(/\n/g, '<br>')}</div>
+            <div class="history-item-date">${note.tags.map(t => '# ' + t).join(' · ')} · ${new Date(note.createdAt).toLocaleDateString()}</div>
           </div>
         `).join('')}
       </div>
-    </div>
-    
-    <!-- 今天学到/想到的一个点 -->
-    <div class="reflection-card">
-      <div class="reflection-header">
-        <span class="reflection-icon">💡</span>
-        <span class="reflection-title">今天学到 / 想到的一个点</span>
+      
+      <div class="history-section">
+        <div class="history-section-title">💡 历史学到的点 (${savedLearns.length})</div>
+        ${savedLearns.length === 0 ? `
+          <div class="history-item-empty">还没有学到的点</div>
+        ` : savedLearns.slice(0, 10).map(r => `
+          <div class="history-item">
+            <div>${r.learnPoint}</div>
+            <div class="history-item-date">${formatDate(r.date)}</div>
+          </div>
+        `).join('')}
       </div>
-      <div class="reflection-hint">哪怕只是「今天翻了两页」也值得记</div>
-      <textarea class="reflection-input" id="todayLearnInput" placeholder="写下今天的一个小收获..." rows="2">${todayReflection?.learnPoint || ''}</textarea>
-      <div style="text-align: right; margin-top: 8px;">
-        <button class="btn btn-primary btn-sm" onclick="saveLearnPoint()">保存</button>
+      
+      <div class="history-section">
+        <div class="history-section-title">📝 历史复盘 (${savedReflections.length})</div>
+        ${savedReflections.length === 0 ? `
+          <div class="history-item-empty">还没有复盘记录</div>
+        ` : savedReflections.slice(0, 10).map(r => `
+          <div class="history-item">
+            ${r.reviewGood ? `<div>✅ ${r.reviewGood}</div>` : ''}
+            ${r.reviewTweak ? `<div>🔄 ${r.reviewTweak}</div>` : ''}
+            <div class="history-item-date">${formatDate(r.date)}</div>
+          </div>
+        `).join('')}
       </div>
-    </div>
-    
-    <!-- 简短复盘 -->
-    <div class="reflection-card review-card">
-      <div class="reflection-header">
-        <span class="reflection-icon">📝</span>
-        <span class="reflection-title">简短复盘</span>
-      </div>
-      <div class="reflection-hint">只写两句，写完就放下</div>
-      <div class="review-item">
-        <label class="review-label">✅ 今天做得不错的 1 个点</label>
-        <input type="text" class="review-input" id="reviewGoodInput" placeholder="例如：主动给客户发了跟进消息" value="${todayReflection?.reviewGood || ''}">
-      </div>
-      <div class="review-item">
-        <label class="review-label">🔄 下次想微调的 1 个点</label>
-        <input type="text" class="review-input" id="reviewTweakInput" placeholder="例如：报价前先多问一句需求" value="${todayReflection?.reviewTweak || ''}">
-      </div>
-      <div style="text-align: right; margin-top: 10px;">
-        <button class="btn btn-primary btn-sm" onclick="saveReview()">保存复盘</button>
-      </div>
-    </div>
-    
-    <div style="display:flex; justify-content:flex-end; margin: 24px 0 16px;">
-      <button class="btn btn-primary" onclick="openInspirationModal()">+ 记录灵感</button>
-    </div>
-    
-    <div class="inspiration-wall">
-      ${State.inspirations.length === 0 ? `
-        <div class="empty-state" style="grid-column: 1/-1;">
-          <div class="empty-state-icon">💡</div>
-          <div class="empty-state-text">灵感不会等人，快记录下第一个想法吧</div>
-        </div>
-      ` : State.inspirations.map(note => `
-        <div class="inspiration-note" onclick="viewInspiration('${note.id}')">
-          <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
-          <div class="note-footer">
-            <span>${note.tags.map(t => '# ' + t).join(' ')}</span>
-            <span>${new Date(note.createdAt).toLocaleDateString()}</span>
+      
+      ${savedTags.length > 0 ? `
+        <div class="history-section">
+          <div class="history-section-title">🏷️ 灵感标签</div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            ${savedTags.map(tag => `<span class="tag" style="background: var(--inspiration-bg); color: var(--inspiration-primary);">#${tag}</span>`).join('')}
           </div>
         </div>
-      `).join('')}
+      ` : ''}
     </div>
   `;
+  
+  document.querySelectorAll('.module-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.module-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.module-tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    });
+  });
+  
+  const learnInput = document.getElementById('todayLearnInput');
+  if (learnInput) {
+    learnInput.addEventListener('blur', () => {
+      const learnPoint = learnInput.value.trim();
+      const todayStr2 = getToday();
+      let reflection = State.dailyReflections.find(r => r.date === todayStr2);
+      if (reflection) {
+        reflection.learnPoint = learnPoint;
+      } else {
+        State.dailyReflections.push({ id: generateId(), date: todayStr2, learnPoint, reviewGood: '', reviewTweak: '' });
+      }
+      saveState('dailyReflections');
+      showToast('已自动保存', 'success');
+    });
+  }
+  
+  const reviewGoodInput = document.getElementById('reviewGoodInput');
+  if (reviewGoodInput) {
+    reviewGoodInput.addEventListener('blur', () => {
+      const reviewGood = reviewGoodInput.value.trim();
+      const reviewTweakInput = document.getElementById('reviewTweakInput');
+      const reviewTweak = reviewTweakInput ? reviewTweakInput.value.trim() : '';
+      const todayStr3 = getToday();
+      let reflection = State.dailyReflections.find(r => r.date === todayStr3);
+      if (reflection) {
+        reflection.reviewGood = reviewGood;
+        reflection.reviewTweak = reviewTweak;
+      } else {
+        State.dailyReflections.push({ id: generateId(), date: todayStr3, learnPoint: '', reviewGood, reviewTweak });
+      }
+      saveState('dailyReflections');
+      showToast('复盘已自动保存', 'success');
+    });
+  }
+  
+  const reviewTweakInput = document.getElementById('reviewTweakInput');
+  if (reviewTweakInput) {
+    reviewTweakInput.addEventListener('blur', () => {
+      const reviewTweak = reviewTweakInput.value.trim();
+      const reviewGoodInput2 = document.getElementById('reviewGoodInput');
+      const reviewGood = reviewGoodInput2 ? reviewGoodInput2.value.trim() : '';
+      const todayStr4 = getToday();
+      let reflection = State.dailyReflections.find(r => r.date === todayStr4);
+      if (reflection) {
+        reflection.reviewGood = reviewGood;
+        reflection.reviewTweak = reviewTweak;
+      } else {
+        State.dailyReflections.push({ id: generateId(), date: todayStr4, learnPoint: '', reviewGood, reviewTweak });
+      }
+      saveState('dailyReflections');
+      showToast('复盘已自动保存', 'success');
+    });
+  }
 }
 
 window.toggleTaskInsp = function(taskId) {
@@ -1838,7 +2108,7 @@ function renderSports(main) {
 }
 
 window.openSportVideo = function(videoUrl, title) {
-  window.open(videoUrl, '_blank');
+  openAppOrWeb('bilibili://', videoUrl);
 };
 
 window.startSport = function(categoryId) {
@@ -1853,7 +2123,7 @@ window.startSport = function(categoryId) {
     <div class="sport-timer" style="padding: 24px; background: var(--sports-bg); border-radius: var(--radius-lg);">
       <div class="timer-display" id="sportTimer" style="font-family: var(--font-title); font-size: 56px; color: var(--sports-primary); letter-spacing: 4px;">00:00</div>
     </div>
-    ${cat.videoUrl ? `<a href="${cat.videoUrl}" target="_blank" style="display:block; text-align:center; margin-bottom: 16px; color: var(--sports-primary); font-size: 14px;">📺 跳转教学视频</a>` : ''}
+    ${cat.videoUrl ? `<a href="javascript:void(0)" onclick="openAppOrWeb('bilibili://', '${cat.videoUrl}')" style="display:block; text-align:center; margin-bottom: 16px; color: var(--sports-primary); font-size: 14px;">📺 跳转教学视频</a>` : ''}
     <div style="display:flex; gap: 12px;">
       <button class="btn btn-secondary" style="flex:1;" id="toggleTimer">▶ 开始</button>
       <button class="btn btn-primary" style="flex:1;" id="finishTimer">完成</button>
@@ -1904,22 +2174,35 @@ window.startSport = function(categoryId) {
 // 日常记录模块
 // ========================================
 function renderDaily(main) {
-  const today = getToday();
-  const weekStart = State.daily.currentWeek.start;
-  const weekDates = getWeekDates(weekStart);
+  const todayStr = getToday();
+  const selectedDate = State.selectedDailyDate || todayStr;
+  const reflection = State.dailyReflections.find(r => r.date === selectedDate);
   
-  // 确保所有天的记录都存在
-  weekDates.forEach(date => {
-    if (!State.daily.logs.find(l => l.date === date)) {
-      State.daily.logs.push({ date, completedItems: [] });
-    }
-  });
-  saveState('daily');
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - 14);
   
-  const currentWeekLogs = State.daily.logs.filter(l => weekDates.includes(l.date));
-  const totalCompleted = currentWeekLogs.reduce((sum, l) => sum + l.completedItems.length, 0);
-  const totalGoals = State.daily.goals.length * 7;
-  const progress = totalGoals > 0 ? Math.round((totalCompleted / totalGoals) * 100) : 0;
+  const weekDays = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dateStr = formatDate(d);
+    const reflectionForDay = State.dailyReflections.find(r => r.date === dateStr);
+    weekDays.push({
+      date: dateStr,
+      day: d.toLocaleDateString('zh-CN', { weekday: 'short' }),
+      dayNum: d.getDate(),
+      isToday: dateStr === todayStr,
+      isSelected: dateStr === selectedDate,
+      isFuture: d > today,
+      hasLearnPoint: reflectionForDay && reflectionForDay.learnPoint,
+      hasReview: reflectionForDay && (reflectionForDay.reviewGood || reflectionForDay.reviewTweak)
+    });
+  }
+  
+  const completedDays = weekDays.filter(d => !d.isFuture && (d.hasLearnPoint || d.hasReview)).length;
+  const totalDays = weekDays.filter(d => !d.isFuture).length;
+  const progress = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
   const circumference = 2 * Math.PI * 35;
   
   main.innerHTML = `
@@ -1934,14 +2217,14 @@ function renderDaily(main) {
             stroke-dashoffset="${circumference - (progress / 100) * circumference}"></circle>
         </svg>
         <div class="progress-text">
-          <h4>${totalCompleted}/${totalGoals}</h4>
-          <p>本周完成度 ${progress}%</p>
+          <h4>${completedDays}/${totalDays}</h4>
+          <p>完成度 ${progress}%</p>
         </div>
       </div>
       
-      <div style="display:flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+      <div style="display:flex; gap: 12px; flex-wrap: wrap;">
         ${State.daily.goals.map(goal => {
-          const completedToday = State.daily.logs.find(l => l.date === today)?.completedItems.includes(goal.id);
+          const completedToday = State.daily.logs.find(l => l.date === todayStr)?.completedItems.includes(goal.id);
           return `
             <div style="padding: 10px 16px; border-radius: 50px; background: ${completedToday ? 'var(--daily-bg)' : 'var(--color-bg-alt)'}; display:flex; align-items:center; gap: 8px; font-size: 13px;">
               <span>${goal.icon}</span>
@@ -1954,32 +2237,47 @@ function renderDaily(main) {
         }).join('')}
         <button onclick="addGoal()" style="padding: 10px 16px; border-radius: 50px; border: 2px dashed var(--color-border); background: transparent; cursor: pointer; font-size: 13px; color: var(--color-text-light);">+ 添加目标</button>
       </div>
-      
-      <div class="week-view">
-        ${weekDates.map(date => {
-          const log = State.daily.logs.find(l => l.date === date);
-          const completedCount = log?.completedItems.length || 0;
-          const isToday = date === today;
-          const dayNames = ['日','一','二','三','四','五','六'];
-          const d = new Date(date);
-          const isFuture = date > today;
-          
-          return `
-            <div class="day-card ${isToday ? 'today' : ''} ${completedCount > 0 ? 'checked' : ''}" ${isFuture ? 'style="opacity: 0.5;"' : ''}>
-              <div class="day-date">周${dayNames[d.getDay()]}<br>${d.getMonth()+1}/${d.getDate()}</div>
-              <div class="day-check">${completedCount > 0 ? '✓' : ''}</div>
-              <div style="font-size: 11px; color: var(--color-text-light);">${completedCount}/${State.daily.goals.length}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
     </div>
     
-    <div class="card" style="margin-top: 24px;">
-      <div class="card-title">✍️ 今日心得 (${formatDate(today)})</div>
-      <p style="font-size:12px; color:var(--color-text-light); margin-bottom:12px;">记录今天的所思所感，哪怕一句话也好</p>
-      <textarea id="todayReflection" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:14px;" placeholder="今天有什么收获或感悟？...">${State.daily.reflections?.[today] || ''}</textarea>
-      <button class="btn btn-primary" style="margin-top:10px;" onclick="saveTodayReflection()">保存今日心得</button>
+    <div class="scroll-date-bar" id="scrollDateBar">
+      ${weekDays.map(d => `
+        <div class="scroll-date-card ${d.isToday ? 'today' : ''} ${d.isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''} ${d.hasLearnPoint || d.hasReview ? 'checked' : ''}" 
+             onclick="selectDailyDate('${d.date}')">
+          <div class="scroll-date-day">${d.day}</div>
+          <div class="scroll-date-date">${d.dayNum}</div>
+          <div class="scroll-date-status">
+            ${d.hasLearnPoint ? '💡' : ''}${d.hasReview ? '📝' : ''}${!d.hasLearnPoint && !d.hasReview && !d.isFuture ? '·' : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="selected-date-reflection">
+      <div class="selected-date-reflection-title">📅 ${formatDate(selectedDate)} ${selectedDate === todayStr ? '（今天）' : ''}</div>
+      <div class="reflection-card" style="margin-bottom: 12px;">
+        <div class="reflection-header">
+          <span class="reflection-icon">💡</span>
+          <span class="reflection-title">今天学到 / 想到的一个点</span>
+        </div>
+        <textarea class="reflection-input" id="selectedLearnInput" placeholder="写下这一天的收获..." rows="2">${reflection?.learnPoint || ''}</textarea>
+      </div>
+      <div class="reflection-card review-card">
+        <div class="reflection-header">
+          <span class="reflection-icon">📝</span>
+          <span class="reflection-title">简短复盘</span>
+        </div>
+        <div class="review-item">
+          <label class="review-label">✅ 做得不错</label>
+          <input type="text" class="review-input" id="selectedReviewGoodInput" placeholder="今天做得好的地方" value="${reflection?.reviewGood || ''}">
+        </div>
+        <div class="review-item">
+          <label class="review-label">🔄 想微调</label>
+          <input type="text" class="review-input" id="selectedReviewTweakInput" placeholder="下次想改进的地方" value="${reflection?.reviewTweak || ''}">
+        </div>
+        <div style="text-align: right; margin-top: 10px;">
+          <button class="btn btn-primary btn-sm" onclick="saveDailyReflection('${selectedDate}')">保存</button>
+        </div>
+      </div>
     </div>
     
     <div class="card" style="margin-top: 16px;">
@@ -1994,13 +2292,35 @@ function renderDaily(main) {
       </div>
       <button class="btn btn-primary" onclick="saveWeekSummary()">保存总结</button>
     </div>
-    
-    <div style="display:flex; gap: 12px; margin-top: 16px;">
-      <button class="btn btn-outline" onclick="changeWeek(-1)">← 上一周</button>
-      <button class="btn btn-ghost" onclick="changeWeek(0)">本周</button>
-      <button class="btn btn-outline" onclick="changeWeek(1)">下一周 →</button>
-    </div>
   `;
+  
+  const scrollBar = document.getElementById('scrollDateBar');
+  if (scrollBar) {
+    const todayCard = scrollBar.querySelector('.scroll-date-card.today');
+    if (todayCard) {
+      requestAnimationFrame(() => {
+        const cardRect = todayCard.getBoundingClientRect();
+        const barRect = scrollBar.getBoundingClientRect();
+        const scrollLeft = todayCard.offsetLeft - (barRect.width / 2) + (cardRect.width / 2);
+        scrollBar.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+      });
+    }
+  }
+  
+  const learnInput = document.getElementById('selectedLearnInput');
+  if (learnInput) {
+    learnInput.addEventListener('blur', () => {
+      const learnPoint = learnInput.value.trim();
+      let reflection2 = State.dailyReflections.find(r => r.date === selectedDate);
+      if (reflection2) {
+        reflection2.learnPoint = learnPoint;
+      } else {
+        State.dailyReflections.push({ id: generateId(), date: selectedDate, learnPoint, reviewGood: '', reviewTweak: '' });
+      }
+      saveState('dailyReflections');
+      showToast('已自动保存', 'success');
+    });
+  }
 }
 
 window.saveTodayReflection = function() {
@@ -2009,6 +2329,32 @@ window.saveTodayReflection = function() {
   State.daily.reflections[getToday()] = text;
   saveState('daily');
   showToast('今日心得已保存', 'success');
+};
+
+window.selectDailyDate = function(date) {
+  State.selectedDailyDate = date;
+  Router.handle();
+};
+
+window.saveDailyReflection = function(date) {
+  const learnInput = document.getElementById('selectedLearnInput');
+  const reviewGoodInput = document.getElementById('selectedReviewGoodInput');
+  const reviewTweakInput = document.getElementById('selectedReviewTweakInput');
+  
+  const learnPoint = learnInput ? learnInput.value.trim() : '';
+  const reviewGood = reviewGoodInput ? reviewGoodInput.value.trim() : '';
+  const reviewTweak = reviewTweakInput ? reviewTweakInput.value.trim() : '';
+  
+  let reflection = State.dailyReflections.find(r => r.date === date);
+  if (reflection) {
+    reflection.learnPoint = learnPoint;
+    reflection.reviewGood = reviewGood;
+    reflection.reviewTweak = reviewTweak;
+  } else {
+    State.dailyReflections.push({ id: generateId(), date, learnPoint, reviewGood, reviewTweak });
+  }
+  saveState('dailyReflections');
+  showToast('已保存', 'success');
 };
 
 window.toggleGoal = function(goalId) {
@@ -2114,119 +2460,165 @@ window.filterNews = function(cat, btn) {
 };
 
 // ========================================
-// AI技巧库模块
+// 阅读模块
 // ========================================
-function renderAI(main) {
-  const categories = [...new Set(AI_SKILLS.map(s => s.category))];
+function renderReading(main) {
+  const topics = READING_TOPICS || [];
+  const featured = READING_FEATURED || [];
+  const categories = [...new Set(topics.map(s => s.category))];
+  
+  const savedBooks = State.readingList || [];
+  
   const catColors = {
-    '写作': '#FFB3BA', '编程': '#BAE1FF', '翻译': '#B4F8C8',
-    '分析': '#FFF3B0', '创意': '#FFDAC1', '学习': '#C9A7EB',
-    '生活': '#A8E6CF', '职场': '#FFAAA5'
+    '文学': '#FFB3BA', '历史': '#BAE1FF', '哲学': '#B4F8C8',
+    '心理': '#FFF3B0', '商业': '#FFDAC1', '科技': '#C9A7EB',
+    '艺术': '#A8E6CF', '生活': '#FFAAA5', '自我成长': '#FFD4BA'
   };
+  
   main.innerHTML = `
-    ${createPageHeader('AI技巧库', 'AI能力，随时调用', 'ai')}
+    ${createPageHeader('阅读', '每日阅读，知识沉淀', 'ai')}
+    
+    ${featured.length > 0 ? `
+      <div class="reading-featured">
+        <div class="reading-featured-title">⭐ 今日推荐</div>
+        ${featured.map(book => `
+          <div class="reading-featured-card">
+            <div class="reading-featured-info">
+              <div class="reading-featured-book">${book.title}</div>
+              <div class="reading-featured-author">${book.author} · ${book.category}</div>
+              <div class="reading-featured-summary">${book.summary}</div>
+              <div class="reading-featured-meta">
+                <span class="reading-level-tag">${book.difficulty}</span>
+                <span class="reading-category-tag">${book.category}</span>
+              </div>
+            </div>
+            <a href="${book.url}" target="_blank" class="btn btn-primary btn-sm" style="flex-shrink:0;">阅读 →</a>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
     
     <div class="ai-search">
-      <input type="text" id="aiSearch" placeholder="搜索AI技能..." oninput="filterAI(this.value)">
+      <input type="text" id="readingSearch" placeholder="搜索阅读主题..." oninput="filterReading(this.value)">
     </div>
     
     <div class="ai-filter">
-      <button class="filter-chip active" onclick="filterAICat('all', this)">全部</button>
-      ${categories.map(cat => `<button class="filter-chip" onclick="filterAICat('${cat}', this)">${cat}</button>`).join('')}
+      <button class="filter-chip active" onclick="filterReadingCat('all', this)">全部</button>
+      ${categories.map(cat => `<button class="filter-chip" onclick="filterReadingCat('${cat}', this)">${cat}</button>`).join('')}
     </div>
     
-    <div class="ai-grid" id="aiGrid">
-      ${AI_SKILLS.map(skill => `
-        <div class="ai-card ai-pattern-${skill.category}" data-category="${skill.category}" data-title="${skill.title}" data-desc="${skill.description}" onclick="openAISkill('${skill.id}')">
+    <div class="ai-grid" id="readingGrid">
+      ${topics.map(skill => `
+        <div class="reading-topic-card" data-category="${skill.category}" data-title="${skill.title}" data-desc="${skill.description}" onclick="openReadingTopic('${skill.id}')">
           <div class="ai-card-deco" style="background:${catColors[skill.category] || '#E8E8E8'}"></div>
-          <div class="ai-icon">${skill.icon}</div>
-          <div class="ai-info">
-            <div class="ai-title">${skill.title}</div>
-            <div class="ai-desc">${skill.description}</div>
-            <div class="ai-cat">${skill.category}</div>
+          <div class="reading-topic-icon">${skill.icon}</div>
+          <div class="reading-topic-info">
+            <div class="reading-topic-title">${skill.title}</div>
+            <div class="reading-topic-desc">${skill.description}</div>
+            <div class="reading-topic-level">${skill.difficulty}</div>
           </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="reading-list-section">
+      <div class="reading-list-header">
+        <div class="reading-list-title">📖 我的读书清单</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddBookModal()">+ 添加</button>
+      </div>
+      ${savedBooks.length === 0 ? `
+        <div class="empty-state" style="padding: 20px;">
+          <div class="empty-state-text" style="font-size:13px;">还在读书吗？添加一本开始吧</div>
+        </div>
+      ` : savedBooks.map(book => `
+        <div class="reading-list-item">
+          <div class="reading-list-item-info">
+            <div class="reading-list-item-title">${book.title}</div>
+            <div class="reading-list-item-progress">
+              <div class="reading-list-item-progress-fill" style="width:${book.progress || 0}%"></div>
+            </div>
+          </div>
+          <div class="reading-list-item-status">${book.progress || 0}%</div>
+          <button class="btn btn-ghost" onclick="removeBook('${book.id}')">🗑️</button>
         </div>
       `).join('')}
     </div>
   `;
 }
 
-window.filterAI = function(query) {
+window.filterReading = function(query) {
   query = query.toLowerCase();
-  document.querySelectorAll('.ai-card').forEach(card => {
+  document.querySelectorAll('.reading-topic-card').forEach(card => {
     const text = (card.dataset.title + card.dataset.desc + card.dataset.category).toLowerCase();
     card.style.display = text.includes(query) ? '' : 'none';
   });
 };
 
-window.filterAICat = function(cat, btn) {
+window.filterReadingCat = function(cat, btn) {
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.ai-card').forEach(card => {
+  document.querySelectorAll('.reading-topic-card').forEach(card => {
     card.style.display = (cat === 'all' || card.dataset.category === cat) ? '' : 'none';
   });
 };
 
-window.openAISkill = function(skillId) {
-  const skill = AI_SKILLS.find(s => s.id === skillId);
-  if (!skill) return;
+window.openReadingTopic = function(topicId) {
+  const topic = (READING_TOPICS || []).find(s => s.id === topicId);
+  if (!topic) return;
   
   showModal(`
     <div style="text-align:center; margin-bottom:16px;">
-      <div style="font-size:48px;">${skill.icon}</div>
-      <h2 style="font-family: var(--font-title); margin: 8px 0; font-size: 22px;">${skill.title}</h2>
-      <p style="color:var(--color-text-light); font-size:13px;">${skill.description}</p>
-    </div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-title">💡 常用提示词</div>
-      ${skill.prompts.map((p, i) => `
-        <div class="prompt-item" onclick="copyPrompt('${p.replace(/'/g, "\\'")}')">
-          <span class="prompt-num">${i + 1}</span>
-          <span class="prompt-text">${p}</span>
-          <span class="prompt-copy">📋 复制</span>
-        </div>
-      `).join('')}
+      <div style="font-size:48px;">${topic.icon}</div>
+      <h2 style="font-family: var(--font-title); margin: 8px 0; font-size: 22px;">${topic.title}</h2>
+      <p style="color:var(--color-text-light); font-size:13px;">${topic.description}</p>
+      <span class="reading-level-tag" style="margin-top:8px; display:inline-block;">${topic.difficulty}</span>
     </div>
     <div class="card">
-      <div class="card-title">💬 试用此技能</div>
-      <div style="background: var(--color-bg-alt); padding: 12px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 13px; color: var(--color-text-light);">
-        试试将这些提示词粘贴到你的AI工具中使用
+      <div class="card-title">📚 相关推荐</div>
+      <div style="color: var(--color-text-light); font-size: 13px; line-height: 1.6;">
+        探索【${topic.category}】领域的经典著作和深度文章，系统地构建你的知识体系。
       </div>
-      <div style="display:flex; gap: 8px;">
-        <input type="text" id="aiPromptInput" style="flex:1; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md);" placeholder="输入你的问题...">
-        <button class="btn btn-primary" onclick="sendAIPrompt('${skill.id}')">发送</button>
+      <div style="margin-top: 12px;">
+        <a href="https://www.google.com/search?q=${encodeURIComponent(topic.title + ' 书籍推荐')}" target="_blank" class="btn btn-primary">搜索相关书籍 →</a>
       </div>
-      <div id="aiResult" style="margin-top: 12px;"></div>
     </div>
   `);
 };
 
-window.copyPrompt = function(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
-  showToast('提示词已复制', 'success');
+window.openAddBookModal = function() {
+  showModal(`
+    <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">添加书籍</h2>
+    <div class="input-group">
+      <label>书名</label>
+      <input type="text" id="bookTitle" placeholder="例如：深度工作">
+    </div>
+    <div class="input-group">
+      <label>当前进度 (%)</label>
+      <input type="number" id="bookProgress" placeholder="0" min="0" max="100" value="0">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveBook()">添加到读书清单</button>
+  `);
 };
 
-window.sendAIPrompt = function(skillId) {
-  const input = document.getElementById('aiPromptInput');
-  const text = input.value.trim();
-  if (!text) { showToast('请输入内容', 'error'); return; }
-  const skill = AI_SKILLS.find(s => s.id === skillId);
-  const result = document.getElementById('aiResult');
-  result.innerHTML = '<div style="color:var(--color-text-light); font-size:13px;">AI思考中...</div>';
-  setTimeout(() => {
-    result.innerHTML = `
-      <div style="padding:12px; background:var(--color-bg-alt); border-radius:var(--radius-md); font-size:13px; line-height:1.6;">
-        【${skill.title}】已收到你的请求。<br>
-        提示: 将你的问题和以下提示词一起提交给AI工具以获得更好的效果。<br>
-        <strong>推荐提示词:</strong> "${skill.prompts[0]}"
-      </div>
-    `;
-  }, 800);
+window.saveBook = function() {
+  const title = document.getElementById('bookTitle').value.trim();
+  const progress = parseInt(document.getElementById('bookProgress').value) || 0;
+  if (!title) { showToast('请输入书名', 'error'); return; }
+  
+  if (!State.readingList) State.readingList = [];
+  State.readingList.push({ id: generateId(), title, progress, addedAt: new Date().toISOString() });
+  saveState('readingList');
+  closeModal();
+  showToast('书籍已添加', 'success');
+  Router.handle();
+};
+
+window.removeBook = function(bookId) {
+  if (!State.readingList) return;
+  State.readingList = State.readingList.filter(b => b.id !== bookId);
+  saveState('readingList');
+  showToast('已删除', 'success');
+  Router.handle();
 };
 function init() {
   // 更新日期显示
@@ -2246,7 +2638,7 @@ function init() {
   Router.register('/sports', renderSports);
   Router.register('/daily', renderDaily);
   Router.register('/news', renderNews);
-  Router.register('/ai', renderAI);
+  Router.register('/ai', renderReading);
   
   // 品牌图片上传功能
   const brandUpload = document.getElementById('brandUpload');
@@ -2306,6 +2698,7 @@ function init() {
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const app = document.getElementById('app');
+  const mainContent = document.getElementById('mainContent');
   
   // 恢复侧边栏状态
   const sidebarHidden = Storage.get('sidebarHidden');
@@ -2323,10 +2716,51 @@ function init() {
     Storage.set('sidebarHidden', isHidden);
   });
   
+  mainContent.addEventListener('click', function(e) {
+    if (!sidebar.classList.contains('hidden')) {
+      sidebar.classList.add('hidden');
+      app.classList.add('sidebar-hidden');
+      sidebarToggle.textContent = '☰';
+      Storage.set('sidebarHidden', true);
+    }
+  });
+  
+  let lastPinchDist = 0;
+  mainContent.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  }, { passive: true });
+  
+  mainContent.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (lastPinchDist > 0 && Math.abs(dist - lastPinchDist) > 30) {
+        sidebar.classList.toggle('hidden');
+        app.classList.toggle('sidebar-hidden');
+        const isHidden = sidebar.classList.contains('hidden');
+        sidebarToggle.textContent = isHidden ? '☰' : '✕';
+        Storage.set('sidebarHidden', isHidden);
+        lastPinchDist = 0;
+      }
+    }
+  }, { passive: true });
+  
+  mainContent.addEventListener('touchend', function(e) {
+    if (e.touches.length < 2) {
+      lastPinchDist = 0;
+    }
+  });
+  
   // AI悬浮窗
   const aiFloatBtn = document.getElementById('aiFloatBtn');
   const aiFloatPanel = document.getElementById('aiFloatPanel');
   const aiFloatClose = document.getElementById('aiFloatClose');
+  const aiFloatConfig = document.getElementById('aiFloatConfig');
   const aiFloatSend = document.getElementById('aiFloatSend');
   const aiFloatInput = document.getElementById('aiFloatInput');
   const aiFloat = document.getElementById('aiFloat');
@@ -2363,17 +2797,41 @@ function init() {
     aiFloatPanel.classList.remove('show');
   });
   
+  aiFloatConfig.addEventListener('click', function() {
+    showAIConfigPrompt();
+  });
+  
   aiFloatSend.addEventListener('click', function() {
     const question = aiFloatInput.value.trim();
     if (!question) return;
     const content = document.getElementById('aiFloatContent');
+    const apiKey = Storage.get('doubaoApiKey');
+    
+    if (!apiKey) {
+      showAIConfigPrompt();
+      return;
+    }
+    
     content.innerHTML += `<p style="color: var(--color-text-light);">你: ${question}</p>`;
     aiFloatInput.value = '';
-    setTimeout(() => {
-      content.innerHTML += `<p style="color: var(--english-primary);">AI: 我是一个演示助手，实际功能需要接入AI服务。你可以尝试点击上方的快捷操作按钮。</p>`;
-      content.scrollTop = content.scrollHeight;
-    }, 500);
+    
+    const loadingId = 'ai-loading-' + Date.now();
+    content.innerHTML += `<p id="${loadingId}" style="color: var(--color-text-light); font-style: italic;">豆包正在思考中...</p>`;
     content.scrollTop = content.scrollHeight;
+    
+    fetchDoubaoAI(question, apiKey)
+      .then(reply => {
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        content.innerHTML += `<p style="color: var(--ai-primary);">豆包: ${reply}</p>`;
+        content.scrollTop = content.scrollHeight;
+      })
+      .catch(err => {
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        content.innerHTML += `<p style="color: #e74c3c;">❌ 请求失败: ${err.message || '未知错误'}</p>`;
+        content.scrollTop = content.scrollHeight;
+      });
   });
   
   aiFloatInput.addEventListener('keypress', function(e) {
@@ -2391,41 +2849,170 @@ document.addEventListener('DOMContentLoaded', init);
 // AI悬浮窗快捷操作
 // ========================================
 window.showAIInspiration = function() {
-  const inspirations = [
-    '灵感来自生活的细节，多观察身边的事物',
-    '尝试跨界思考，将不同领域的知识结合',
-    '每天记录一个新想法，即使看似无关紧要',
-    '保持好奇心，多问为什么',
-    '与不同领域的人交流，获取新视角'
-  ];
-  const random = inspirations[Math.floor(Math.random() * inspirations.length)];
   const content = document.getElementById('aiFloatContent');
-  content.innerHTML += `<p style="color: var(--color-text-light);">💡 灵感生成:</p><p style="color: var(--inspiration-primary); font-weight: 600;">${random}</p>`;
+  const apiKey = Storage.get('doubaoApiKey');
+  if (apiKey) {
+    content.innerHTML += `<p style="color: var(--color-text-light);">💡 灵感生成中...</p>`;
+    fetchDoubaoAI('帮我生成5个创意灵感，主题是日常生活中的小美好', apiKey)
+      .then(reply => {
+        content.innerHTML += `<p style="color: var(--inspiration-primary); font-weight: 600;">💡 ${reply}</p>`;
+        content.scrollTop = content.scrollHeight;
+      })
+      .catch(() => {
+        content.innerHTML += `<p style="color: var(--color-text-light);">灵感来自生活的细节，多观察身边的事物</p>`;
+      });
+  } else {
+    const inspirations = [
+      '灵感来自生活的细节，多观察身边的事物',
+      '尝试跨界思考，将不同领域的知识结合',
+      '每天记录一个新想法，即使看似无关紧要',
+      '保持好奇心，多问为什么',
+      '与不同领域的人交流，获取新视角'
+    ];
+    const random = inspirations[Math.floor(Math.random() * inspirations.length)];
+    content.innerHTML += `<p style="color: var(--inspiration-primary); font-weight: 600;">💡 ${random}</p>`;
+  }
   content.scrollTop = content.scrollHeight;
 };
 
 window.showAIQuote = function() {
-  const quote = DAILY_QUOTES[getDailyIndex(DAILY_QUOTES)];
   const content = document.getElementById('aiFloatContent');
-  content.innerHTML += `<p style="color: var(--color-text-light);">📝 今日一句:</p><p style="color: var(--color-text); font-style: italic;">「${quote}」</p>`;
+  const apiKey = Storage.get('doubaoApiKey');
+  if (apiKey) {
+    content.innerHTML += `<p style="color: var(--color-text-light);">📝 获取今日一句...</p>`;
+    fetchDoubaoAI('给我一句温暖的、有哲理的中文短句，适合作为今日座右铭', apiKey)
+      .then(reply => {
+        content.innerHTML += `<p style="color: var(--color-text); font-style: italic;">「${reply}」</p>`;
+        content.scrollTop = content.scrollHeight;
+      })
+      .catch(() => {
+        const quote = DAILY_QUOTES[getDailyIndex(DAILY_QUOTES)];
+        content.innerHTML += `<p style="color: var(--color-text); font-style: italic;">「${quote}」</p>`;
+      });
+  } else {
+    const quote = DAILY_QUOTES[getDailyIndex(DAILY_QUOTES)];
+    content.innerHTML += `<p style="color: var(--color-text); font-style: italic;">「${quote}」</p>`;
+  }
   content.scrollTop = content.scrollHeight;
 };
 
 window.showAIWord = function() {
-  const word = DAILY_WORDS[getDailyIndex(DAILY_WORDS)];
   const content = document.getElementById('aiFloatContent');
-  content.innerHTML += `<p style="color: var(--color-text-light);">📚 今日单词:</p><p style="color: var(--english-primary); font-weight: 600;">${word.word}</p><p>${word.phonetic}</p><p style="color: var(--color-text-light);">${word.meaning}</p>`;
+  const apiKey = Storage.get('doubaoApiKey');
+  if (apiKey) {
+    content.innerHTML += `<p style="color: var(--color-text-light);">📚 获取今日单词...</p>`;
+    fetchDoubaoAI('推荐一个适合日常使用的英语单词，包含音标、中文意思和例句', apiKey)
+      .then(reply => {
+        content.innerHTML += `<p style="color: var(--english-primary); font-weight: 600;">📚 ${reply}</p>`;
+        content.scrollTop = content.scrollHeight;
+      })
+      .catch(() => {
+        const word = DAILY_WORDS[getDailyIndex(DAILY_WORDS)];
+        content.innerHTML += `<p style="color: var(--english-primary); font-weight: 600;">${word.word}</p><p>${word.phonetic}</p><p style="color: var(--color-text-light);">${word.meaning}</p>`;
+      });
+  } else {
+    const word = DAILY_WORDS[getDailyIndex(DAILY_WORDS)];
+    content.innerHTML += `<p style="color: var(--english-primary); font-weight: 600;">${word.word}</p><p>${word.phonetic}</p><p style="color: var(--color-text-light);">${word.meaning}</p>`;
+  }
   content.scrollTop = content.scrollHeight;
 };
 
 window.showAIPlan = function() {
-  const today = new Date();
-  const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const content = document.getElementById('aiFloatContent');
-  content.innerHTML += `<p style="color: var(--color-text-light);">🎯 今日计划 (${dayNames[today.getDay()]}):</p>
-    <p>1. 完成最重要的一件事</p>
-    <p>2. 学习30分钟</p>
-    <p>3. 运动20分钟</p>
-    <p>4. 阅读10页书</p>`;
+  const apiKey = Storage.get('doubaoApiKey');
+  if (apiKey) {
+    content.innerHTML += `<p style="color: var(--color-text-light);">🎯 生成今日计划...</p>`;
+    fetchDoubaoAI('为我制定一个高效的今日计划，包括学习、运动、休息，给出具体时间安排', apiKey)
+      .then(reply => {
+        content.innerHTML += `<p style="color: var(--sports-primary); font-weight: 600;">🎯 ${reply}</p>`;
+        content.scrollTop = content.scrollHeight;
+      })
+      .catch(() => {
+        const today = new Date();
+        const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        content.innerHTML += `<p style="color: var(--color-text-light);">🎯 今日计划 (${dayNames[today.getDay()]}):</p>
+          <p>1. 完成最重要的一件事</p>
+          <p>2. 学习30分钟</p>
+          <p>3. 运动20分钟</p>
+          <p>4. 阅读10页书</p>`;
+      });
+  } else {
+    const today = new Date();
+    const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    content.innerHTML += `<p style="color: var(--color-text-light);">🎯 今日计划 (${dayNames[today.getDay()]}):</p>
+      <p>1. 完成最重要的一件事</p>
+      <p>2. 学习30分钟</p>
+      <p>3. 运动20分钟</p>
+      <p>4. 阅读10页书</p>`;
+  }
   content.scrollTop = content.scrollHeight;
+};
+
+function fetchDoubaoAI(question, apiKey) {
+  return fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'doubao-pro-32k',
+      messages: [
+        { role: 'system', content: '你是一个温暖、专业的个人助手，回答简洁、有深度、富有启发性。' },
+        { role: 'user', content: question }
+      ]
+    })
+  }).then(res => {
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    return res.json();
+  }).then(data => {
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content;
+    }
+    throw new Error('API返回格式异常');
+  });
+}
+
+function showAIConfigPrompt() {
+  showModal(`
+    <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">🔑 配置豆包 AI</h2>
+    <div style="padding: 16px; background: var(--color-bg-alt); border-radius: var(--radius-md); margin-bottom: 16px; font-size: 13px; line-height: 1.6; color: var(--color-text-light);">
+      <div style="margin-bottom: 8px;">使用豆包 AI 服务需要配置 API Key：</div>
+      <div>1. 访问 <a href="https://console.volcengine.com/ark" target="_blank" style="color: var(--ai-primary);">火山引擎方舟平台</a></div>
+      <div>2. 创建 API Key 并复制</div>
+      <div>3. 在下方粘贴 API Key</div>
+    </div>
+    <div class="input-group">
+      <label>API Key</label>
+      <input type="password" id="doubaoKeyInput" placeholder="粘贴你的 API Key">
+    </div>
+    <div style="display: flex; gap: 12px; margin-top: 16px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveDoubaoKey()">保存并开始使用</button>
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+    </div>
+  `);
+}
+
+window.saveDoubaoKey = function() {
+  const key = document.getElementById('doubaoKeyInput').value.trim();
+  if (!key) {
+    showToast('请输入 API Key', 'error');
+    return;
+  }
+  Storage.set('doubaoApiKey', key);
+  closeModal();
+  showToast('豆包 API Key 已保存', 'success');
+  const content = document.getElementById('aiFloatContent');
+  if (content) {
+    content.innerHTML += `<p style="color: var(--ai-primary);">✅ 豆包已配置完成，现在可以开始对话了！</p>`;
+    content.scrollTop = content.scrollHeight;
+  }
+};
+
+window.clearDoubaoKey = function() {
+  if (!confirm('确定清除豆包 API Key？')) return;
+  Storage.remove('doubaoApiKey');
+  showToast('API Key 已清除', 'success');
 };

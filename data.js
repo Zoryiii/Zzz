@@ -1,5 +1,5 @@
 /* ========================================
-   鈡净毓 · 初始数据
+   毓 · 初始数据
    ======================================== */
 
 // 模块配置
@@ -75,9 +75,9 @@ const MODULES = [
     shape: 'square'
   },
   {
-    key: 'ai', name: 'AI技巧库', icon: '🧙',
+    key: 'ai', name: '阅读', icon: '📖',
     cover: 'public/images/205912.jpg',
-    description: 'AI技能随时查',
+    description: '每日阅读，知识沉淀',
     theme: { primary: '#6C5CE7', secondary: '#A29BFE', bg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE8FF 100%)' },
     shape: 'hexagon'
   }
@@ -528,16 +528,32 @@ const DAILY_WORDS = [
   { word: 'cognizant', phonetic: '/ˈkɒɡnɪzənt/', meaning: 'adj. 认识到的，意识到的' }
 ];
 
-// AI技巧库
-const AI_SKILLS = [
-  { id: 's1', title: '智能写作', icon: '✒️', description: '帮助生成文章、段落、邮件等', category: '写作', prompts: ['请帮我写一封求职信，职位是前端工程师', '帮我润色这段文字，使其更专业', '生成一篇关于人工智能的科普文章'] },
-  { id: 's2', title: '代码助手', icon: '👾', description: '编程问题解答、代码生成与调试', category: '编程', prompts: ['用Python写一个猜数字游戏', '如何优化这段JavaScript代码的性能？', '写一个React组件实现待办事项列表'] },
-  { id: 's3', title: '翻译润色', icon: '🍄', description: '中英互译、多语言翻译', category: '翻译', prompts: ['翻译以下文本为英文：...', '把这段中文翻译成地道的英文口语', '检查我的翻译是否准确，并改进表达'] },
-  { id: 's4', title: '数据分析', icon: '🎯', description: '数据解读、统计分析建议', category: '分析', prompts: ['分析这些销售数据的趋势', '如何用Excel做数据透视表？', '帮我设计一个用户调研问卷'] },
-  { id: 's5', title: '创意生成', icon: '🌟', description: '头脑风暴、创意灵感', category: '创意', prompts: ['给我10个博客标题建议，主题是环保', '帮我想一个咖啡品牌的名字和标语', '生成5个短视频脚本创意'] },
-  { id: 's6', title: '学习辅导', icon: '🎓', description: '知识讲解、学习方法', category: '学习', prompts: ['用简单的话解释什么是区块链', '帮我制定一个30天英语学习计划', '讲解一下量子力学的基本原理'] },
-  { id: 's7', title: '生活助手', icon: '🍳', description: '生活建议、菜谱推荐', category: '生活', prompts: ['推荐3道快手菜，适合上班族', '如何高效整理衣柜？', '给我一个7天的健身计划'] },
-  { id: 's8', title: '职场发展', icon: '🚀', description: '职业规划、面试技巧', category: '职场', prompts: ['如何准备产品经理的面试？', '帮我写一份项目经验的简历描述', '职场沟通中有哪些禁忌？'] }
+// 阅读主题
+const READING_TOPICS = [
+  { id: 'r1', title: '文学经典', icon: '📚', description: '穿越时空，品读中外文学名著', difficulty: '入门', category: '文学' },
+  { id: 'r2', title: '哲学思辨', icon: '🧠', description: '探索人生意义与思维方式', difficulty: '进阶', category: '哲学' },
+  { id: 'r3', title: '心理学入门', icon: '💭', description: '理解自我与他人的心理机制', difficulty: '入门', category: '心理' },
+  { id: 'r4', title: '商业与经济', icon: '💼', description: '认识商业世界的运作规律', difficulty: '进阶', category: '商业' },
+  { id: 'r5', title: '科技前沿', icon: '🔬', description: '追踪人工智能、量子计算等前沿领域', difficulty: '高级', category: '科技' },
+  { id: 'r6', title: '艺术与美学', icon: '🎨', description: '感受绘画、音乐、建筑中的美', difficulty: '入门', category: '艺术' },
+  { id: 'r7', title: '历史长河', icon: '🏛️', description: '以史为鉴，认识人类文明演进', difficulty: '进阶', category: '历史' },
+  { id: 'r8', title: '自我成长', icon: '🌱', description: '习惯养成、情绪管理、思维提升', difficulty: '入门', category: '成长' }
+];
+
+// 每日阅读推荐
+const READING_FEATURED = [
+  { id: 'rf1', title: '原子习惯', author: 'James Clear', category: '自我成长', summary: '用1%的小改变，带来复利式的大变化。本书系统阐述了习惯养成的科学方法。', difficulty: '入门', url: 'https://www.jamesclear.com/atomic-habits' },
+  { id: 'rf2', title: '深度工作', author: 'Cal Newport', category: '商业', summary: '在注意力稀缺的时代，如何进行高强度的深度工作，成为一个有价值的人。', difficulty: '进阶', url: 'https://www.calnewport.com/books/deep-work/' },
+  { id: 'rf3', title: '思考，快与慢', author: 'Daniel Kahneman', category: '心理学', summary: '诺奖得主带你认识大脑的两套思考系统，了解认知偏差如何影响决策。', difficulty: '高级', url: 'https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow' }
+];
+
+// BBC Learning English 文章
+const BBC_ARTICLES = [
+  { id: 'b1', title: 'How to improve your English pronunciation', level: 'B1', url: 'https://www.bbclearningenglish.com/pronunciation/' },
+  { id: 'b2', title: 'The art of small talk', level: 'A2', url: 'https://www.bbclearningenglish.com/small-talk/' },
+  { id: 'b3', title: 'Understanding British culture', level: 'B2', url: 'https://www.bbclearningenglish.com/british-culture/' },
+  { id: 'b4', title: 'Business English essentials', level: 'B2', url: 'https://www.bbclearningenglish.com/business-english/' },
+  { id: 'b5', title: 'News vocabulary builder', level: 'B1', url: 'https://www.bbclearningenglish.com/news-vocabulary/' }
 ];
 
 // 每日新闻（模拟数据，实际应用中可接入API）
