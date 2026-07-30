@@ -2893,12 +2893,42 @@ function init() {
     aiFloat.classList.add('docked');
   }
   
-  aiFloatBtn.addEventListener('click', function() {
+  let longPressTimer = null;
+  let isLongPress = false;
+  
+  aiFloatBtn.addEventListener('click', function(e) {
     if (aiFloat.classList.contains('docked')) {
       aiFloat.classList.remove('docked');
       Storage.set('aiFloatHidden', false);
-    } else {
+      return;
+    }
+    if (isLongPress) {
+      isLongPress = false;
+      return;
+    }
+    // 单击打开豆包APP
+    openDoubaoAPP();
+  });
+  
+  // 长按打开网页内AI对话面板
+  aiFloatBtn.addEventListener('touchstart', function(e) {
+    longPressTimer = setTimeout(() => {
+      isLongPress = true;
       aiFloatPanel.classList.toggle('show');
+    }, 600);
+  });
+  
+  aiFloatBtn.addEventListener('touchend', function(e) {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  });
+  
+  aiFloatBtn.addEventListener('touchmove', function(e) {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
     }
   });
   
@@ -2907,6 +2937,28 @@ function init() {
     aiFloat.classList.add('docked');
     aiFloatPanel.classList.remove('show');
     Storage.set('aiFloatHidden', true);
+  });
+  
+  // 鼠标长按也打开网页内AI对话
+  aiFloatBtn.addEventListener('mousedown', function() {
+    longPressTimer = setTimeout(() => {
+      isLongPress = true;
+      aiFloatPanel.classList.toggle('show');
+    }, 600);
+  });
+  
+  aiFloatBtn.addEventListener('mouseup', function() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  });
+  
+  aiFloatBtn.addEventListener('mouseleave', function() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
   });
   
   // 点击边缘小标签恢复
@@ -3069,6 +3121,41 @@ window.showAIPlan = function() {
   }
   content.scrollTop = content.scrollHeight;
 };
+
+// 打开豆包APP
+function openDoubaoAPP() {
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  
+  // 豆包APP的URL Scheme
+  const doubaoScheme = 'doubao://';
+  // 豆包网页版作为fallback
+  const doubaoWeb = 'https://www.doubao.com/';
+  
+  if (isAndroid) {
+    // Android: 使用intent scheme
+    const intentUrl = `intent://#Intent;scheme=doubao;package=com.ss.android.ugc.aweme;end`;
+    window.location.href = intentUrl;
+    // 如果1.5秒内没有跳转成功，则打开网页版
+    setTimeout(() => {
+      if (!document.hidden) {
+        window.location.href = doubaoWeb;
+      }
+    }, 1500);
+  } else if (isIOS) {
+    // iOS: 直接尝试URL Scheme
+    window.location.href = doubaoScheme;
+    setTimeout(() => {
+      if (!document.hidden) {
+        window.location.href = doubaoWeb;
+      }
+    }, 1500);
+  } else {
+    // 桌面端: 打开网页版
+    window.open(doubaoWeb, '_blank');
+  }
+}
 
 function fetchDoubaoAI(question, apiKey) {
   return fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
