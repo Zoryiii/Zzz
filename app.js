@@ -325,23 +325,27 @@ function renderAccounting(main) {
     categoryStats[a.category] = (categoryStats[a.category] || 0) + a.amount;
   });
   
-  const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthStart = formatDate(lastMonth);
-  const lastMonthEnd = formatDate(new Date(now.getFullYear(), now.getMonth(), 0));
+  // 获取历史月度汇总
+  function getMonthlySummaries() {
+    const months = {};
+    State.accounting.forEach(a => {
+      const d = new Date(a.date);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!months[monthKey]) {
+        months[monthKey] = { expense: 0, income: 0, records: [], categories: {} };
+      }
+      months[monthKey].records.push(a);
+      if (a.type === 'expense') {
+        months[monthKey].expense += a.amount;
+        months[monthKey].categories[a.category] = (months[monthKey].categories[a.category] || 0) + a.amount;
+      } else {
+        months[monthKey].income += a.amount;
+      }
+    });
+    return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+  }
   
-  const lastMonthRecords = State.accounting.filter(a => {
-    const d = new Date(a.date);
-    return d >= new Date(lastMonthStart) && d <= new Date(lastMonthEnd + 'T23:59:59');
-  });
-  const lastMonthExpense = lastMonthRecords.filter(a => a.type === 'expense').reduce((s, a) => s + a.amount, 0);
-  const lastMonthIncome = lastMonthRecords.filter(a => a.type === 'income').reduce((s, a) => s + a.amount, 0);
-  const lastMonthCategoryStats = {};
-  lastMonthRecords.filter(a => a.type === 'expense').forEach(a => {
-    lastMonthCategoryStats[a.category] = (lastMonthCategoryStats[a.category] || 0) + a.amount;
-  });
-  const topCategory = Object.entries(lastMonthCategoryStats).sort((a, b) => b[1] - a[1])[0];
-  const topCatName = topCategory ? (ACCOUNT_CATEGORIES.expense.find(c => c.id === topCategory[0])?.name || topCategory[0]) : '-';
+  const monthlySummaries = getMonthlySummaries();
   
   main.innerHTML = `
     ${createPageHeader('记账', '记录生活中的每一笔', 'accounting')}
@@ -371,26 +375,13 @@ function renderAccounting(main) {
     </div>
     
     <div class="module-tab-content active" id="tab-detail">
-      <div class="monthly-summary">
-        <div class="monthly-summary-title">📊 上月总结</div>
-        <div class="monthly-summary-grid">
-          <div class="monthly-summary-item">
-            <div class="monthly-summary-value expense">¥${lastMonthExpense.toFixed(0)}</div>
-            <div class="monthly-summary-label">总支出</div>
-          </div>
-          <div class="monthly-summary-item">
-            <div class="monthly-summary-value income">¥${lastMonthIncome.toFixed(0)}</div>
-            <div class="monthly-summary-label">总收入</div>
-          </div>
-          <div class="monthly-summary-item">
-            <div class="monthly-summary-value balance">¥${(lastMonthIncome - lastMonthExpense).toFixed(0)}</div>
-            <div class="monthly-summary-label">结余</div>
-          </div>
-          <div class="monthly-summary-item">
-            <div class="monthly-summary-value" style="font-size:16px; color: var(--accounting-primary);">${topCatName}</div>
-            <div class="monthly-summary-label">支出最多</div>
-          </div>
+      <div class="history-summary-card" onclick="openHistoryDetail()" style="cursor: pointer;">
+        <div class="history-summary-icon">📊</div>
+        <div class="history-summary-info">
+          <div class="history-summary-title">历史总结</div>
+          <div class="history-summary-hint">点击查看过往每月账目详情</div>
         </div>
+        <div class="history-summary-arrow">→</div>
       </div>
       
       ${Object.keys(categoryStats).length > 0 ? `
@@ -586,6 +577,137 @@ window.deleteAccounting = function(id) {
   saveState('accounting');
   showToast('已删除', 'success');
   Router.handle();
+};
+
+// 历史总结详情
+window.openHistoryDetail = function() {
+  const months = {};
+  State.accounting.forEach(a => {
+    const d = new Date(a.date);
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!months[monthKey]) {
+      months[monthKey] = { expense: 0, income: 0, records: [], categories: {} };
+    }
+    months[monthKey].records.push(a);
+    if (a.type === 'expense') {
+      months[monthKey].expense += a.amount;
+      months[monthKey].categories[a.category] = (months[monthKey].categories[a.category] || 0) + a.amount;
+    } else {
+      months[monthKey].income += a.amount;
+    }
+  });
+  
+  const sortedMonths = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+  const years = {};
+  sortedMonths.forEach(([month, data]) => {
+    const year = month.split('-')[0];
+    if (!years[year]) years[year] = [];
+    years[year].push({ month, data });
+  });
+  
+  showModal(`
+    <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">📊 历史总结</h2>
+    ${Object.keys(years).length === 0 ? `
+      <div class="empty-state" style="padding: 32px;">
+        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-text">还没有记账记录</div>
+      </div>
+    ` : Object.entries(years).map(([year, months]) => `
+      <div class="year-group">
+        <div class="year-group-title">${year}年</div>
+        <div class="month-list">
+          ${months.map(({ month, data }) => {
+            const monthNum = month.split('-')[1];
+            const topCategory = Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0];
+            const topCatName = topCategory ? (ACCOUNT_CATEGORIES.expense.find(c => c.id === topCategory[0])?.name || topCategory[0]) : '-';
+            return `
+              <div class="month-item" onclick="showMonthDetail('${month}')">
+                <div class="month-item-header">
+                  <div class="month-item-num">${parseInt(monthNum)}月</div>
+                  <div class="month-item-stats">
+                    <span style="color: var(--accounting-primary);">支出 ¥${data.expense.toFixed(0)}</span>
+                    <span style="color: var(--tasks-primary); margin-left: 12px;">收入 ¥${data.income.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div class="month-item-summary">
+                  结余 ¥${(data.income - data.expense).toFixed(0)} · 最多: ${topCatName} · ${data.records.length}笔
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `, () => {});
+};
+
+window.showMonthDetail = function(monthKey) {
+  const months = {};
+  State.accounting.forEach(a => {
+    const d = new Date(a.date);
+    const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!months[mKey]) {
+      months[mKey] = { expense: 0, income: 0, records: [], categories: {} };
+    }
+    months[mKey].records.push(a);
+    if (a.type === 'expense') {
+      months[mKey].expense += a.amount;
+      months[mKey].categories[a.category] = (months[mKey].categories[a.category] || 0) + a.amount;
+    } else {
+      months[mKey].income += a.amount;
+    }
+  });
+  
+  const data = months[monthKey];
+  if (!data) return;
+  
+  const [year, month] = monthKey.split('-');
+  const topCategory = Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0];
+  const topCatName = topCategory ? (ACCOUNT_CATEGORIES.expense.find(c => c.id === topCategory[0])?.name || topCategory[0]) : '-';
+  
+  showModal(`
+    <h2 style="font-family: var(--font-title); margin-bottom: 16px; font-size: 22px;">📅 ${year}年${parseInt(month)}月账目详情</h2>
+    
+    <div class="month-summary-detail">
+      <div class="month-summary-stat">
+        <div class="month-summary-value expense">¥${data.expense.toFixed(0)}</div>
+        <div class="month-summary-label">总支出</div>
+      </div>
+      <div class="month-summary-stat">
+        <div class="month-summary-value income">¥${data.income.toFixed(0)}</div>
+        <div class="month-summary-label">总收入</div>
+      </div>
+      <div class="month-summary-stat">
+        <div class="month-summary-value balance">¥${(data.income - data.expense).toFixed(0)}</div>
+        <div class="month-summary-label">结余</div>
+      </div>
+      <div class="month-summary-stat">
+        <div class="month-summary-value" style="color: var(--accounting-primary);">${topCatName}</div>
+        <div class="month-summary-label">支出最多</div>
+      </div>
+    </div>
+    
+    <h3 style="font-size: 16px; font-weight: 600; margin: 20px 0 12px;">账目明细</h3>
+    <div class="accounting-list" style="max-height: 300px; overflow-y: auto;">
+      ${data.records.sort((a, b) => new Date(b.date) - new Date(a.date)).map(item => {
+        const catList = ACCOUNT_CATEGORIES[item.type];
+        const cat = catList.find(c => c.id === item.category) || { name: item.category, icon: '📝' };
+        return `
+          <div class="accounting-item ${item.type}">
+            <div class="accounting-icon">${cat.icon}</div>
+            <div class="accounting-details">
+              <div class="accounting-category">${cat.name}</div>
+              ${item.note ? `<div class="accounting-note">${item.note}</div>` : ''}
+            </div>
+            <div>
+              <div class="accounting-amount">${item.type === 'income' ? '+' : '-'}¥${item.amount.toFixed(2)}</div>
+              <div class="accounting-date">${formatDate(item.date)}</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `, () => {});
 };
 
 // ========================================
