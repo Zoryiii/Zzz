@@ -1231,6 +1231,10 @@ function renderEnglish(main) {
   const grammarPoint = ENGLISH_DAILY.grammarPoints[getDailyIndex(ENGLISH_DAILY.grammarPoints)];
   const todayLog = State.englishLogs.find(l => l.date === getToday()) || null;
   
+  // 获取今日英文期刊短文
+  const articleIdx = getDailyIndex(ENGLISH_ARTICLES || []);
+  const dailyArticle = (ENGLISH_ARTICLES || [])[articleIdx] || ENGLISH_ARTICLES[0];
+  
   main.innerHTML = `
     ${createPageHeader('英语学习', '每日听说读写，与世界对话', 'english')}
     
@@ -1281,6 +1285,31 @@ function renderEnglish(main) {
     
     <div class="tab-content" id="tab-learn" style="display:none;">
       <div class="card english-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span class="level-badge">${dailyArticle.level}</span>
+          <span style="font-size:12px; color:var(--color-text-light);">📰 ${dailyArticle.source} · ${dailyArticle.wordCount}词</span>
+        </div>
+        <h2 class="topic-title">${dailyArticle.title}</h2>
+        <div style="font-size:15px; line-height:1.8; color:var(--color-text); white-space:pre-wrap; margin: 16px 0;">${dailyArticle.text}</div>
+        
+        <div class="vocab-list" style="margin-top: 20px;">
+          <div class="vocab-label">核心词汇</div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            ${dailyArticle.vocab.map(v => `<span style="padding:6px 12px; background:var(--english-bg); border-radius:50px; font-size:13px;">${v}</span>`).join('')}
+          </div>
+        </div>
+        
+        <div style="margin-top: 16px; padding: 14px; background:var(--color-bg-alt); border-radius:var(--radius-md);">
+          <div class="vocab-label" style="margin-bottom: 8px;">📖 中文翻译</div>
+          <div style="font-size:14px; line-height:1.7; color:var(--color-text-light);">${dailyArticle.translation}</div>
+        </div>
+        
+        <div style="margin-top: 16px;">
+          <button class="btn btn-secondary" onclick="speakText('${dailyArticle.title}')">🔊 朗读标题</button>
+        </div>
+      </div>
+      
+      <div class="card english-card" style="margin-top: 16px;">
         <div class="level-badge">${dailyTopic.level}</div>
         <h2 class="topic-title">${dailyTopic.title}</h2>
         <div class="vocab-list">
@@ -1294,6 +1323,7 @@ function renderEnglish(main) {
           <div class="example-text" style="margin-top:8px; padding:12px; background:var(--color-bg-alt); border-radius:var(--radius-md);">"${dailyTopic.sentence}"</div>
         </div>
       </div>
+      
       <div class="card">
         <div class="card-title">💬 AI 互动问答</div>
         <div id="chatBox" style="max-height: 250px; overflow-y:auto; margin-bottom: 12px;">
@@ -1305,22 +1335,22 @@ function renderEnglish(main) {
         </div>
       </div>
       <div class="resource-grid">
-        <a class="resource-card" href="https://www.bbclearningenglish.com/" target="_blank">
+        <a class="resource-card" href="https://www.bbc.co.uk/learningenglish" target="_blank" rel="noopener">
           <div class="resource-icon">📻</div>
           <div class="resource-name">BBC Learning</div>
           <div class="resource-desc">英语听力与新闻</div>
         </a>
-        <a class="resource-card" href="https://www.duolingo.com/" target="_blank">
+        <a class="resource-card" href="https://www.duolingo.cn/" target="_blank" rel="noopener">
           <div class="resource-icon">🦉</div>
           <div class="resource-name">Duolingo</div>
           <div class="resource-desc">趣味闯关学英语</div>
         </a>
-        <a class="resource-card" href="https://ted.com/" target="_blank">
+        <a class="resource-card" href="https://www.ted.com/" target="_blank" rel="noopener">
           <div class="resource-icon">🎤</div>
           <div class="resource-name">TED Talks</div>
           <div class="resource-desc">演讲与口语模仿</div>
         </a>
-        <a class="resource-card" href="https://www.grammarly.com/" target="_blank">
+        <a class="resource-card" href="https://www.grammarly.com/" target="_blank" rel="noopener">
           <div class="resource-icon">✏️</div>
           <div class="resource-name">Grammarly</div>
           <div class="resource-desc">写作语法检查</div>
@@ -1330,10 +1360,10 @@ function renderEnglish(main) {
           <div class="resource-name">欧路词典</div>
           <div class="resource-desc">英汉双解词典</div>
         </a>
-        <a class="resource-card" href="https://www.oxfordlearnersdictionaries.com/" target="_blank">
+        <a class="resource-card" href="https://dictionary.cambridge.org/" target="_blank" rel="noopener">
           <div class="resource-icon">📚</div>
-          <div class="resource-name">牛津学习</div>
-          <div class="resource-desc">牛津词典在线</div>
+          <div class="resource-name">剑桥词典</div>
+          <div class="resource-desc">剑桥在线词典</div>
         </a>
       </div>
       
@@ -1341,7 +1371,7 @@ function renderEnglish(main) {
         <div class="card-title">📻 BBC Learning English 精选</div>
         <div class="bbc-articles">
           ${(BBC_ARTICLES || []).map(article => `
-            <a href="${article.url}" target="_blank" class="bbc-article-link">
+            <a href="${article.url}" target="_blank" rel="noopener" class="bbc-article-link">
               <span class="bbc-level-tag">${article.level}</span>
               <span class="bbc-article-title">${article.title}</span>
               <span class="bbc-article-arrow">→</span>
@@ -1807,10 +1837,11 @@ function renderPhotos(main) {
 
 window.openPhotoModal = function() {
   showModal(`
-    <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">添加照片</h2>
+    <h2 style="font-family: var(--font-title); margin-bottom: 20px; font-size: 22px;">拍照添加</h2>
     <div class="input-group">
-      <label>选择照片</label>
+      <label>📸 拍照</label>
       <input type="file" id="photoFile" accept="image/*" capture="environment" class="file-upload-btn">
+      <div style="font-size:12px; color:var(--color-text-light); margin-top:6px;">点击上方按钮直接打开相机拍照</div>
     </div>
     <div class="image-preview" id="photoPreview" style="display:none;"></div>
     <div class="input-group">
@@ -2411,57 +2442,18 @@ function renderDaily(main) {
     });
   }
   
-  const completedDays = weekDays.filter(d => !d.isFuture && (d.hasLearnPoint || d.hasReview)).length;
-  const totalDays = weekDays.filter(d => !d.isFuture).length;
-  const progress = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
-  const circumference = 2 * Math.PI * 35;
-  
-  // 统计历史数据
+  // 历史数据
   const allReflections = State.dailyReflections.filter(r => r.learnPoint || r.reviewGood || r.reviewTweak);
-  const totalReflections = allReflections.length;
-  const totalLearnPoints = State.dailyReflections.filter(r => r.learnPoint).length;
-  const totalReviews = State.dailyReflections.filter(r => r.reviewGood || r.reviewTweak).length;
   
   main.innerHTML = `
     ${createPageHeader('日常记录', '每周习惯养成，点滴积累成长', 'daily')}
     
     <div class="module-tabs daily-tabs">
       <button class="module-tab active" data-tab="record">📝 记录</button>
-      <button class="module-tab" data-tab="history">📊 历史</button>
+      <button class="module-tab" data-tab="history">📚 历史</button>
     </div>
     
     <div class="module-tab-content active" id="tab-record">
-      <div class="week-summary">
-        <div class="week-progress">
-          <svg class="progress-ring" viewBox="0 0 80 80">
-            <circle class="bg" cx="40" cy="40" r="35"></circle>
-            <circle class="fg" cx="40" cy="40" r="35" 
-              stroke-dasharray="${circumference}" 
-              stroke-dashoffset="${circumference - (progress / 100) * circumference}"></circle>
-          </svg>
-          <div class="progress-text">
-            <h4>${completedDays}/${totalDays}</h4>
-            <p>完成度 ${progress}%</p>
-          </div>
-        </div>
-        
-        <div style="display:flex; gap: 12px; flex-wrap: wrap;">
-          ${State.daily.goals.map(goal => {
-            const completedToday = State.daily.logs.find(l => l.date === todayStr)?.completedItems.includes(goal.id);
-            return `
-              <div style="padding: 10px 16px; border-radius: 50px; background: ${completedToday ? 'var(--daily-bg)' : 'var(--color-bg-alt)'}; display:flex; align-items:center; gap: 8px; font-size: 13px;">
-                <span>${goal.icon}</span>
-                <span>${goal.title}</span>
-                <button onclick="toggleGoal('${goal.id}')" style="background:none; border:none; cursor:pointer; font-size: 16px;">
-                  ${completedToday ? '✅' : '⬜'}
-                </button>
-              </div>
-            `;
-          }).join('')}
-          <button onclick="addGoal()" style="padding: 10px 16px; border-radius: 50px; border: 2px dashed var(--color-border); background: transparent; cursor: pointer; font-size: 13px; color: var(--color-text-light);">+ 添加目标</button>
-        </div>
-      </div>
-      
       <div class="scroll-date-bar" id="scrollDateBar">
         ${weekDays.map(d => `
           <div class="scroll-date-card ${d.isToday ? 'today' : ''} ${d.isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''} ${d.hasLearnPoint || d.hasReview ? 'checked' : ''}" 
@@ -2502,37 +2494,9 @@ function renderDaily(main) {
           </div>
         </div>
       </div>
-      
-      <div class="card" style="margin-top: 16px;">
-        <div class="card-title">📝 本周总结</div>
-        <div class="input-group">
-          <label>总结</label>
-          <textarea id="weekSummary" placeholder="本周做了什么？有哪些收获？">${State.daily.weekSummary || ''}</textarea>
-        </div>
-        <div class="input-group">
-          <label>心得反思</label>
-          <textarea id="weekReflection" placeholder="反思一下这周的成长和改进方向...">${State.daily.weekReflection || ''}</textarea>
-        </div>
-        <button class="btn btn-primary" onclick="saveWeekSummary()">保存总结</button>
-      </div>
     </div>
     
     <div class="module-tab-content" id="tab-history" style="display:none;">
-      <div class="stats-grid" style="margin-bottom: 20px;">
-        <div class="stat-box">
-          <div class="stat-box-label">总记录天数</div>
-          <div class="stat-box-value" style="color: var(--daily-primary);">${totalReflections}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box-label">学到/想到</div>
-          <div class="stat-box-value" style="color: var(--color-success);">${totalLearnPoints}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box-label">复盘记录</div>
-          <div class="stat-box-value" style="color: var(--tasks-primary);">${totalReviews}</div>
-        </div>
-      </div>
-      
       ${allReflections.length === 0 ? `
         <div class="empty-state">
           <div class="empty-state-icon">📊</div>
@@ -2738,6 +2702,7 @@ function renderReading(main) {
   const categories = [...new Set(topics.map(s => s.category))];
   
   const savedBooks = State.readingList || [];
+  const bookThoughts = State.bookThoughts || {};
   
   const catColors = {
     '文学': '#FFB3BA', '历史': '#BAE1FF', '哲学': '#B4F8C8',
@@ -2747,6 +2712,45 @@ function renderReading(main) {
   
   main.innerHTML = `
     ${createPageHeader('阅读', '每日阅读，知识沉淀', 'ai')}
+    
+    <div class="reading-list-section" style="margin-bottom: 24px;">
+      <div class="reading-list-header">
+        <div class="reading-list-title">📖 我的阅读清单</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddBookModal()">+ 添加书籍</button>
+      </div>
+      ${savedBooks.length === 0 ? `
+        <div class="empty-state" style="padding: 20px;">
+          <div class="empty-state-text" style="font-size:13px;">还在读书吗？添加一本开始吧</div>
+        </div>
+      ` : savedBooks.map(book => `
+        <div class="reading-list-item" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="reading-list-item-info" style="flex:1;">
+              <div class="reading-list-item-title">${book.title}</div>
+              <div class="reading-list-item-progress">
+                <div class="reading-list-item-progress-fill" style="width:${book.progress || 0}%"></div>
+              </div>
+            </div>
+            <div class="reading-list-item-status">${book.progress || 0}%</div>
+            <a href="https://search.douban.com/book/subject_search?search_text=${encodeURIComponent(book.title)}&cat=1001" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="搜索这本书">🔍</a>
+            <button class="btn btn-ghost" onclick="removeBook('${book.id}')">🗑️</button>
+          </div>
+          <div style="margin-top: 8px;">
+            <div style="font-size:12px; color:var(--color-text-light); margin-bottom:6px;">💭 想法记录 (${(bookThoughts[book.id] || []).length})</div>
+            ${(bookThoughts[book.id] || []).map((t, i) => `
+              <div style="font-size:13px; padding:6px 10px; background:var(--color-bg-alt); border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-start;">
+                <span style="flex:1; line-height:1.5;">${t.text}</span>
+                <span style="font-size:11px; color:var(--color-text-light); margin-left:8px; flex-shrink:0;">${t.date}</span>
+              </div>
+            `).join('')}
+            <div style="display:flex; gap:6px; margin-top:6px;">
+              <input type="text" id="thoughtInput_${book.id}" placeholder="添加想法..." style="flex:1; padding:6px 10px; border:1px solid var(--color-border); border-radius:6px; font-size:13px;" onkeypress="if(event.key==='Enter')addBookThought('${book.id}')">
+              <button class="btn btn-primary btn-sm" onclick="addBookThought('${book.id}')">+</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
     
     ${featured.length > 0 ? `
       <div class="reading-featured">
@@ -2762,7 +2766,7 @@ function renderReading(main) {
                 <span class="reading-category-tag">${book.category}</span>
               </div>
             </div>
-            <a href="${book.url}" target="_blank" class="btn btn-primary btn-sm" style="flex-shrink:0;">阅读 →</a>
+            <a href="https://search.douban.com/book/subject_search?search_text=${encodeURIComponent(book.title)}&cat=1001" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="flex-shrink:0;">搜索 →</a>
           </div>
         `).join('')}
       </div>
@@ -2787,29 +2791,6 @@ function renderReading(main) {
             <div class="reading-topic-desc">${skill.description}</div>
             <div class="reading-topic-level">${skill.difficulty}</div>
           </div>
-        </div>
-      `).join('')}
-    </div>
-    
-    <div class="reading-list-section">
-      <div class="reading-list-header">
-        <div class="reading-list-title">📖 我的读书清单</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddBookModal()">+ 添加</button>
-      </div>
-      ${savedBooks.length === 0 ? `
-        <div class="empty-state" style="padding: 20px;">
-          <div class="empty-state-text" style="font-size:13px;">还在读书吗？添加一本开始吧</div>
-        </div>
-      ` : savedBooks.map(book => `
-        <div class="reading-list-item">
-          <div class="reading-list-item-info">
-            <div class="reading-list-item-title">${book.title}</div>
-            <div class="reading-list-item-progress">
-              <div class="reading-list-item-progress-fill" style="width:${book.progress || 0}%"></div>
-            </div>
-          </div>
-          <div class="reading-list-item-status">${book.progress || 0}%</div>
-          <button class="btn btn-ghost" onclick="removeBook('${book.id}')">🗑️</button>
         </div>
       `).join('')}
     </div>
@@ -2848,8 +2829,9 @@ window.openReadingTopic = function(topicId) {
       <div style="color: var(--color-text-light); font-size: 13px; line-height: 1.6;">
         探索【${topic.category}】领域的经典著作和深度文章，系统地构建你的知识体系。
       </div>
-      <div style="margin-top: 12px;">
-        <a href="https://www.google.com/search?q=${encodeURIComponent(topic.title + ' 书籍推荐')}" target="_blank" class="btn btn-primary">搜索相关书籍 →</a>
+      <div style="margin-top: 12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="https://search.douban.com/book/subject_search?search_text=${encodeURIComponent(topic.title + ' 书籍推荐')}&cat=1001" target="_blank" rel="noopener" class="btn btn-primary">🔍 豆瓣搜书 →</a>
+        <a href="https://www.douban.com/tag/${encodeURIComponent(topic.category)}" target="_blank" rel="noopener" class="btn btn-secondary">📚 ${topic.category}标签</a>
       </div>
     </div>
   `);
@@ -2886,8 +2868,27 @@ window.saveBook = function() {
 window.removeBook = function(bookId) {
   if (!State.readingList) return;
   State.readingList = State.readingList.filter(b => b.id !== bookId);
+  if (State.bookThoughts) delete State.bookThoughts[bookId];
   saveState('readingList');
+  saveState('bookThoughts');
   showToast('已删除', 'success');
+  Router.handle();
+};
+
+window.addBookThought = function(bookId) {
+  const input = document.getElementById(`thoughtInput_${bookId}`);
+  if (!input || !input.value.trim()) return;
+  
+  if (!State.bookThoughts) State.bookThoughts = {};
+  if (!State.bookThoughts[bookId]) State.bookThoughts[bookId] = [];
+  
+  State.bookThoughts[bookId].push({
+    text: input.value.trim(),
+    date: getToday()
+  });
+  saveState('bookThoughts');
+  input.value = '';
+  showToast('想法已添加', 'success');
   Router.handle();
 };
 function init() {

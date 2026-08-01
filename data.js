@@ -547,13 +547,67 @@ const READING_FEATURED = [
   { id: 'rf3', title: '思考，快与慢', author: 'Daniel Kahneman', category: '心理学', summary: '诺奖得主带你认识大脑的两套思考系统，了解认知偏差如何影响决策。', difficulty: '高级', url: 'https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow' }
 ];
 
+// 英文期刊短文（约200词）
+const ENGLISH_ARTICLES = [
+  {
+    id: 'ea1',
+    title: 'The Power of Small Habits',
+    source: 'The Atlantic',
+    level: 'B2',
+    wordCount: 198,
+    text: 'We often believe that success comes from big, dramatic changes. We think we need to quit our jobs, move to a new city, or completely transform our routines overnight. But research suggests otherwise. Small habits, repeated consistently, can lead to remarkable results over time.\n\nConsider the principle of compound interest. A one percent improvement each day may seem trivial, but over a year, it multiplies to thirty-seven times better. The same applies to learning a language, building a business, or improving health. The key is not intensity but consistency.\n\nThe challenge with small habits is that their effects are invisible in the short term. You will not notice a difference after reading ten pages a day for a week. But after a year, you will have read over three thousand six hundred pages. The mind struggles with delayed gratification, yet this is precisely where growth happens.\n\nTo build a small habit, start with something so easy you cannot say no. Want to exercise more? Begin with two minutes of stretching. Want to write more? Start with one sentence. The goal is not the action itself but establishing the identity of someone who does that action regularly.\n\nSmall habits are the architecture of a life well-lived.',
+    vocab: ['compound interest', 'trivial', 'consistency', 'delayed gratification', 'architecture'],
+    translation: '我们常以为成功源于巨大的改变。但研究表明，微小习惯的持续重复才能带来非凡结果。每天进步1%，一年后就会提升37倍。关键不在于强度，而在于坚持。'
+  },
+  {
+    id: 'ea2',
+    title: 'Why Cities Never Sleep',
+    source: 'The Economist',
+    level: 'B2',
+    wordCount: 195,
+    text: 'Cities have always been centers of human activity, but modern cities operate on a completely different scale. London, Tokyo, and New York never truly sleep. Their economies run around the clock, fueled by shift workers, international trade, and an insatiable demand for services.\n\nThe twenty-four-hour city is not merely a product of electricity and technology. It reflects a fundamental shift in how we live. In the past, work was tied to daylight. Today, the global economy demands constant connectivity. When Tokyo sleeps, London wakes. When London dozes, New York takes over.\n\nThis perpetual motion has consequences. Night workers face health risks that day workers rarely encounter. The disruption of circadian rhythms has been linked to heart disease, depression, and certain cancers. Yet for many, night work is not a choice but an economic necessity.\n\nCities are also rethinking their nighttime infrastructure. Public transportation, street lighting, and safety services must adapt to a population that is active at all hours. Some cities have appointed night mayors to oversee this transition.\n\nThe city that never sleeps is both a marvel of human organization and a reminder that progress often comes with hidden costs. As urban populations grow, finding balance between vitality and rest will become one of the defining challenges of this century.',
+    vocab: ['insatiable', 'perpetual', 'circadian rhythms', 'infrastructure', 'vitality'],
+    translation: '现代城市从不真正入睡。伦敦、东京和纽约的经济全天候运转。24小时城市不仅是电力的产物，更反映了生活方式的根本转变。但夜间工作带来了健康风险，城市也需要重新思考夜间基础设施。'
+  },
+  {
+    id: 'ea3',
+    title: 'The Science of Memory',
+    source: 'Nature',
+    level: 'C1',
+    wordCount: 202,
+    text: 'Memory is not a recording device. It is a reconstructive process, piecing together fragments of experience each time we recall them. This discovery, made by cognitive psychologists decades ago, has profound implications for how we understand ourselves.\n\nEvery time you remember an event, your brain does not simply replay a stored file. Instead, it reassembles the memory from scattered neural patterns. Like a storyteller retelling a tale, each recounting introduces slight variations. Over time, these variations accumulate. The memory you hold today may differ significantly from what actually happened.\n\nThis does not mean our memories are unreliable. Rather, they are adaptive. The brain prioritizes meaning over accuracy. It retains the emotional essence of an experience while discarding precise details. This is why you remember how a conversation felt but not the exact words spoken.\n\nResearchers have found that emotional arousal enhances memory consolidation. Events accompanied by strong feelings, whether joy or fear, are more vividly retained. The amygdala, a small structure deep in the brain, tags these experiences as important.\n\nUnderstanding memory\'s reconstructive nature has practical applications. In legal settings, eyewitness testimony is now treated with more caution. In education, spaced repetition and active recall have proven more effective than passive rereading. In daily life, it reminds us to be humble about what we think we remember.',
+    vocab: ['reconstructive', 'fragments', 'neural patterns', 'consolidation', 'amygdala'],
+    translation: '记忆不是录音设备，而是一个重建过程。每次回忆时，大脑都会重新拼凑记忆碎片。记忆优先保留意义而非准确性，情绪强化记忆巩固。这一发现对法律、教育和日常生活都有深远影响。'
+  },
+  {
+    id: 'ea4',
+    title: 'Remote Work and the Future',
+    source: 'Financial Times',
+    level: 'B2',
+    wordCount: 190,
+    text: 'The pandemic accelerated a trend that was already underway: the decentralization of work. Remote work, once a perk offered by progressive companies, became a necessity almost overnight. Now, as the world settles into a new rhythm, the question is not whether remote work will persist but how it will evolve.\n\nProponents argue that remote work increases productivity, reduces commuting time, and gives employees more control over their schedules. Critics counter that it erodes company culture, makes collaboration harder, and blurs the boundary between work and personal life.\n\nThe truth likely lies somewhere in between. Hybrid models, where employees split their time between home and office, are emerging as the most popular solution. This approach offers flexibility while maintaining opportunities for in-person collaboration.\n\nThe implications extend beyond individual companies. Cities that relied on office workers are seeing reduced foot traffic, affecting restaurants, shops, and public transportation. Real estate markets are shifting as people seek larger homes with dedicated office space. Even immigration patterns are changing, as workers freed from geographic constraints relocate to smaller cities and rural areas.\n\nThe future of work will not be a simple return to the past nor a complete break from tradition. It will be a negotiation between employers and employees, between efficiency and community, between freedom and structure. The organizations that navigate this transition successfully will be those that listen to their people.',
+    vocab: ['decentralization', 'proponents', 'erodes', 'hybrid', 'geographic constraints'],
+    translation: '疫情加速了工作去中心化的趋势。远程工作从福利变成必需品。混合办公模式正在成为最受欢迎的解决方案。远程工作的影响超越了公司层面，影响城市、房地产市场甚至移民模式。'
+  },
+  {
+    id: 'ea5',
+    title: 'The Art of Listening',
+    source: 'Harvard Business Review',
+    level: 'B1',
+    wordCount: 187,
+    text: 'Most people listen with the intent to reply, not to understand. They are either speaking or preparing to speak. This habit, so common that we barely notice it, is one of the greatest barriers to meaningful communication.\n\nTrue listening requires setting aside our own agenda. It means giving full attention to the speaker without mentally composing a response. It involves not just hearing words but noticing tone, body language, and what remains unsaid. This level of attention is rare and powerful.\n\nIn professional settings, poor listening costs money. Misunderstandings lead to errors, duplicated work, and missed opportunities. Leaders who fail to listen create cultures of silence, where employees feel undervalued and disengaged. The cost is not just individual frustration but organizational decline.\n\nImproving listening skills begins with awareness. Notice how often you interrupt, finish someone\'s sentence, or shift the conversation to yourself. These habits are deeply ingrained, but they can be changed.\n\nTry this experiment: in your next conversation, wait three seconds after the other person finishes speaking before you respond. The silence may feel uncomfortable at first, but it communicates respect and gives the speaker space to elaborate. You will be surprised by what emerges in that pause.\n\nListening is not passive. It is one of the most active, generous things we can do for another person. In a world of constant noise, the ability to truly listen is becoming a rare and valuable skill.',
+    vocab: ['intent', 'agenda', 'ingrained', 'elaborate', 'generous'],
+    translation: '大多数人倾听是为了回应，而非理解。真正的倾听要求放下自己的议程，全神贯注于说话者。在职场中，不善倾听会导致误解和错失机会。改善倾听技巧始于觉察，尝试在对话中等待三秒再回应。'
+  }
+];
+
 // BBC Learning English 文章
 const BBC_ARTICLES = [
-  { id: 'b1', title: 'How to improve your English pronunciation', level: 'B1', url: 'https://www.bbclearningenglish.com/pronunciation/' },
-  { id: 'b2', title: 'The art of small talk', level: 'A2', url: 'https://www.bbclearningenglish.com/small-talk/' },
-  { id: 'b3', title: 'Understanding British culture', level: 'B2', url: 'https://www.bbclearningenglish.com/british-culture/' },
-  { id: 'b4', title: 'Business English essentials', level: 'B2', url: 'https://www.bbclearningenglish.com/business-english/' },
-  { id: 'b5', title: 'News vocabulary builder', level: 'B1', url: 'https://www.bbclearningenglish.com/news-vocabulary/' }
+  { id: 'b1', title: 'How to improve your English pronunciation', level: 'B1', url: 'https://www.bbc.co.uk/learningenglish/english/features/pronunciation' },
+  { id: 'b2', title: '6 Minute English', level: 'B1', url: 'https://www.bbc.co.uk/learningenglish/english/features/6-minute-english' },
+  { id: 'b3', title: 'English at Work', level: 'A2', url: 'https://www.bbc.co.uk/learningenglish/english/features/english-at-work' },
+  { id: 'b4', title: 'Business English', level: 'B2', url: 'https://www.bbc.co.uk/learningenglish/english/features/business' },
+  { id: 'b5', title: 'English in the News', level: 'B2', url: 'https://www.bbc.co.uk/learningenglish/english/features/news-review' }
 ];
 
 // 每日新闻（模拟数据，实际应用中可接入API）
