@@ -122,66 +122,49 @@ function compressImage(file, maxWidth) {
   });
 }
 
-// APP深度链接配置
+// APP深度链接配置（scheme + Android包名）
 const APP_LINKS = {
-  douyin: { scheme: 'snssdk1128://', intent: 'snssdk1128://', web: 'https://www.douyin.com' },
-  bilibili: { scheme: 'bilibili://', intent: 'bilibili://', web: 'https://www.bilibili.com' },
-  netease: { scheme: 'neteasecloudmusic://', intent: 'neteasecloudmusic://', web: 'https://music.163.com' },
-  eudic: { scheme: 'eudic://', intent: 'eudic://', web: 'https://www.eudic.net' },
-  doubao: { scheme: 'doubao://', intent: 'doubao://', web: 'https://www.doubao.com' }
+  douyin:   { scheme: 'snssdk1128://',           pkg: 'com.ss.android.ugc.aweme',   web: 'https://www.douyin.com' },
+  bilibili: { scheme: 'bilibili://',             pkg: 'tv.danmaku.bili',            web: 'https://www.bilibili.com' },
+  netease:  { scheme: 'orpheus://',              pkg: 'com.netease.cloudmusic',     web: 'https://music.163.com' },
+  eudic:    { scheme: 'eudic://',                pkg: 'com.eusoft.eudic',           web: 'https://www.eudic.net' },
+  doubao:   { scheme: 'doubao://',               pkg: 'com.larus.nova',             web: 'https://www.doubao.com' }
 };
 
 function openAppOrWeb(appKey, webUrl) {
-  const app = APP_LINKS[appKey] || { scheme: appKey, intent: appKey, web: webUrl };
+  const app = APP_LINKS[appKey] || { scheme: appKey, pkg: '', web: webUrl };
   const ua = navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(ua);
   const isAndroid = /android/.test(ua);
-  
+  const fallbackUrl = webUrl || app.web;
+  const startTime = Date.now();
+
+  // 统一方案：直接用 location.href 跳转 scheme，超时后跳网页
+  // 这是最可靠的方式，与抖音的成功方式一致
   if (isAndroid) {
-    // Android: 使用更可靠的方式
-    const intentUrl = `intent://#Intent;scheme=${app.scheme.replace('://','')};package=com.netease.cloudmusic;end`;
-    const startTime = Date.now();
-    
-    // 创建隐藏iframe尝试打开
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = app.intent;
-    document.body.appendChild(iframe);
-    
-    // 备用方案：直接跳转
-    setTimeout(() => {
-      if (!document.hidden && Date.now() - startTime < 2000) {
-        window.location.href = webUrl || app.web;
+    // Android: 优先尝试 intent scheme（带包名，更可靠）
+    const intentUrl = `intent://${app.scheme.replace('://','')}#Intent;scheme=${app.scheme.replace('://','')};package=${app.pkg};end`;
+    window.location.href = intentUrl;
+
+    setTimeout(function() {
+      if (!document.hidden && Date.now() - startTime < 2500) {
+        window.location.href = fallbackUrl;
       }
-      document.body.removeChild(iframe);
-    }, 1500);
-    
-    // 如果页面隐藏说明APP打开成功
-    window.addEventListener('pagehide', () => {
-      document.body.removeChild(iframe);
-    }, { once: true });
-    
+    }, 2000);
+
   } else if (isIOS) {
-    // iOS: 使用location.href + timeout
-    const startTime = Date.now();
-    
-    // 创建临时链接
-    const link = document.createElement('a');
-    link.href = app.scheme;
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    
-    setTimeout(() => {
-      if (!document.hidden && Date.now() - startTime < 2000) {
-        window.location.href = webUrl || app.web;
+    // iOS: 直接用 location.href 跳转 scheme
+    window.location.href = app.scheme;
+
+    setTimeout(function() {
+      if (!document.hidden && Date.now() - startTime < 2500) {
+        window.location.href = fallbackUrl;
       }
-      document.body.removeChild(link);
-    }, 1500);
-    
+    }, 2000);
+
   } else {
     // 桌面端: 直接打开网页
-    window.open(webUrl || app.web, '_blank');
+    window.open(fallbackUrl, '_blank');
   }
 }
 

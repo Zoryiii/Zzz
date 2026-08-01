@@ -1,5 +1,5 @@
 // 毓 PWA Service Worker
-const CACHE_NAME = 'zhongjingyu-v9';
+const CACHE_NAME = 'zhongjingyu-v10';
 const CACHE_FILES = [
   './',
   './index.html',
